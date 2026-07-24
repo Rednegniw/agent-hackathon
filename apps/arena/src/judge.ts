@@ -108,7 +108,7 @@ async function scoreOne(
   trace: AgentTrace,
   speech: string,
   arena: Arena,
-): Promise<Score> {
+): Promise<Score | null> {
   const rubric = CRITERIA.map((c) => `  "${c.key}": 0-10   // ${c.prompt}`).join('\n')
 
   const text = await ask(
@@ -121,11 +121,38 @@ async function scoreOne(
       `Score honestly: a 10 is exceptional and most work is not exceptional.`,
   )
 
-  const parsed = extractJson<Record<string, number | string>>(text)
+  let parsed = extractJson<Record<string, number | string>>(text)
+
+  /**
+   * A juror that returns unparseable output must not cost the agent points.
+   * Scoring 0 on a parse failure penalises the competitor for the judge's
+   * malfunction and can decide the round: observed live, where one juror
+   * returned prose and handed an otherwise solid entry a 0/30.
+   * Retry once, then abstain.
+   */
+  if (!parsed) {
+    const retry = await ask(
+      `Your last reply was not valid JSON. Reply with ONLY the JSON object, nothing else.\n\n` +
+        `Agent: ${trace.agentId}\nPresentation: ${speech}`,
+      `You are ${judge.id}. ${judge.lens}`,
+    )
+    parsed = extractJson<Record<string, number | string>>(retry)
+  }
+
+  if (!parsed) {
+    console.warn(`[judge] ${judge.id} could not score ${trace.agentId}, abstaining`)
+    arena.emit({
+      agentId: trace.agentId,
+      kind: 'verdict',
+      body: `${judge.id}: abstained (no parseable score)`,
+    })
+    return null
+  }
+
   const scores: Record<string, number> = {}
 
   for (const c of CRITERIA) {
-    const v = Number(parsed?.[c.key] ?? 0)
+    const v = Number(parsed[c.key] ?? 0)
     scores[c.key] = Number.isFinite(v) ? Math.max(0, Math.min(10, v)) : 0
   }
 
@@ -173,8 +200,15 @@ export async function runEvaluation(events: AgentEvent[], arena: Arena): Promise
   const speeches = await Promise.all(traces.map((t) => present(t, arena)))
 
   for (const [i, trace] of traces.entries()) {
-    const perJudge = await Promise.all(JUDGES.map((j) => scoreOne(j, trace, speeches[i], arena)))
-    const total = perJudge.reduce((a, s) => a + s.total, 0)
+    const settled = await Promise.all(JUDGES.map((j) => scoreOne(j, trace, speeches[i], arena)))
+    const perJudge = settled.filter((s): s is Score => s !== null)
+
+    /**
+     * Mean of the jurors who actually scored, scaled back up, so an abstention
+     * does not silently cost the agent a third of its points.
+     */
+    const raw = perJudge.reduce((a, s) => a + s.total, 0)
+    const total = perJudge.length ? Math.round((raw / perJudge.length) * JUDGES.length) : 0
 
     verdicts.push({ agentId: trace.agentId, total, perJudge, presentation: speeches[i] })
   }

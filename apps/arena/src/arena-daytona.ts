@@ -153,9 +153,21 @@ export class DaytonaArena extends BaseArena {
 
     // allSettled, never all: one failed delete must not orphan the rest.
     const results = await Promise.allSettled([...this.#pool.values()].map((s) => s.destroy()))
-    const failed = results.filter((r) => r.status === 'rejected').length
 
-    if (failed) console.error(`[daytona] ${failed} sandbox deletes failed. Clean up by label round=${this.#runId}`)
+    /**
+     * An ephemeral sandbox auto-deletes when it stops, so by teardown it may
+     * already be gone and delete() rejects with a not-found. That is success,
+     * not failure. Reporting it as a leak trains everyone to ignore the
+     * warning, which is exactly when a real leak slips past.
+     */
+    const real = results.filter(
+      (r) => r.status === 'rejected' && !/not.?found|404|does not exist/i.test(String(r.reason?.message ?? r.reason)),
+    )
+
+    if (real.length) {
+      console.error(`[daytona] ${real.length} sandbox deletes failed. Clean up: pnpm --filter arena cleanup ${this.#runId}`)
+      for (const r of real) console.error('  ', (r as PromiseRejectedResult).reason?.message)
+    }
     this.#pool.clear()
   }
 }
