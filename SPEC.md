@@ -50,35 +50,65 @@ agent consensus.
 
 | Phase | Duration | What agents can do |
 |-------|----------|--------------------|
-| `mingle` | 90s | `send_message` only. Theme is announced. |
+| `mingle` | 90s | `pick_theme`, `send_message`. Both themes announced. |
 | `build` | 12 min | `sandbox_bash`, `sandbox_write`, `send_message` |
 | `submit` | 2 min | `submit` only |
-| `judged` | - | nothing; orchestrator scores |
+| `judged` | - | nothing; orchestrator scores each track |
 
-Durations are config, not constants in three files. One `ROUND` object.
+Durations and the agent roster are config, not constants scattered across three
+files. One `ROUND` object.
 
-### The theme
+Sandboxes are created **lazily, at the end of mingle**: one per agent, only
+after tracks are settled. Nothing is provisioned for an agent that never gets
+going, and mingle costs no compute.
 
-Announced at round start, identical for every agent, hard-coded for the demo:
+### Themes and tracks
 
-> Build a single-page web app that does something genuinely useful with the
-> current time. It must serve on port 3000.
+Two themes are offered at round start. Every agent **picks its own** during the
+mingle phase; agents that share a theme form a track and compete only against
+each other.
 
-Constraining the theme is what makes submissions comparable. Agents still choose
-their own project inside it, which preserves the "they decided" story.
+| Track | Theme announced to agents |
+|-------|---------------------------|
+| `time` | Build a single-page web app that does something genuinely useful with the current time. |
+| `color` | Build a single-page web app that helps someone make a decision about colour. |
+
+Both must serve on port 3000. Both are chosen to be reachable in twelve minutes
+and to look obviously different from each other on screen, which matters when
+two preview iframes sit side by side in the demo.
+
+Offering a bounded menu rather than a single fixed theme is the whole point of
+this design: the agent genuinely decides, and the decision is still comparable,
+because everything inside a track answers the same brief.
+
+**Capacity rule.** Each track holds at most three agents. If an agent picks a
+full track, `pick_theme` returns an error result naming the tracks with space
+left, and the agent picks again. This is enforced in code, first-come-first-
+served on tool-call order, and it is deliberately visible: agents racing for a
+slot is a better office moment than a tidy 3/3 split every time.
+
+**Fallback.** Any agent still without a track when mingle ends is assigned to the
+emptier one. Never let a missing pick stall the round.
 
 ### Agents
 
-Three, with **asymmetric personas** so that talking to each other has a point.
-Personas differ in stated strength only, not in available tools.
+Six, with **asymmetric personas** so that talking to a rival has a point.
+Personas differ in stated disposition only, never in available tools.
 
 | Agent | Persona |
 |-------|---------|
 | `ada` | Systems-minded. Prefers correctness and edge cases over polish. |
-| `rex` | Visual. Prefers something that looks striking over something complete. |
+| `rex` | Visual. Prefers something striking over something complete. |
 | `juno` | Product-minded. Prefers the simplest thing a real person would use. |
+| `iris` | Data-minded. Wants to compute or visualise something, not just display it. |
+| `otto` | Minimalist. Ships the smallest thing that fully works and stops. |
+| `vera` | Contrarian. Looks for the angle on a brief that nobody else will take. |
 
-Names are fixed. Avatars in the office key off the agent id.
+Names are fixed and start with distinct letters so the office can label avatars
+with a single character. Six is the recommended count, not a constant: it is the
+point where the office looks populated and two winners are still showable inside
+a three-minute demo. Nine agents across three tracks triples token spend and
+gives you one more winner than the demo has room for.
 
 ### Submission
 
@@ -100,9 +130,15 @@ Two components, kept separate so the second can be cut.
 **Mechanical (0-3), computed by the orchestrator.** One point each for: preview
 returns 200; response body is over 500 bytes; no uncaught error in the build log.
 
-**Creative (0-7), LLM judge.** One `query()` call with the three submissions'
-titles, descriptions and preview URLs, returning a ranked list with one sentence
-of reasoning each.
+**Creative (0-7), LLM judge.** One `query()` call **per track**, given only that
+track's submissions plus the theme they answer, returning a ranked list with one
+sentence of reasoning each. Judging within a track and never across tracks is
+what keeps the comparison fair: every entry the judge sees answers the same
+brief.
+
+**Winners.** One per track, then a single cross-track "best in show" chosen from
+just the two winners by a final judge call. That last call is the demo's closing
+beat, and it is cheap because it only ever sees two entries.
 
 If Braintrust is wired up, the creative score moves there and the mechanical
 checks become Braintrust scorers. **This is the optional layer.** Ship the
@@ -165,11 +201,30 @@ function agentTools(agentId: string, sandbox: Sandbox, bus: EventBus) {
       ),
 
       tool(
+        'pick_theme',
+        'Choose which theme you will build for. Each theme holds at most three ' +
+          'agents, first come first served. If it is full you must pick again.',
+        { theme: z.enum(['time', 'color']) },
+        async ({ theme }) => {
+          const result = arena.claimTrack(agentId, theme)
+          if (!result.ok) {
+            return {
+              content: [{ type: 'text', text:
+                `"${theme}" is full. Still open: ${result.open.join(', ')}.` }],
+              isError: true,
+            }
+          }
+          bus.emit({ agentId, kind: 'theme', body: theme })
+          return { content: [{ type: 'text', text: `you are building for "${theme}"` }] }
+        },
+      ),
+
+      tool(
         'send_message',
         'Say something to another agent. They receive it on their next turn. ' +
           'Use it to compare approaches or agree not to build the same thing.',
         {
-          to: z.enum(['ada', 'rex', 'juno']),
+          to: z.enum(['ada', 'rex', 'juno', 'iris', 'otto', 'vera']),
           text: z.string(),
         },
         async ({ to, text }) => {
@@ -203,6 +258,7 @@ function agentTools(agentId: string, sandbox: Sandbox, bus: EventBus) {
 
 ```ts
 const ARENA_TOOLS = [
+  'mcp__arena__pick_theme',
   'mcp__arena__sandbox_bash',
   'mcp__arena__sandbox_write',
   'mcp__arena__send_message',
@@ -244,21 +300,26 @@ visibly react to each other between phases rather than talking into a void.
 ### System prompt shape
 
 ```
-You are {name}, competing in a hackathon against two other AI agents.
+You are {name}, competing in a hackathon against five other AI agents.
 {persona}
 
 You have your own Linux sandbox. sandbox_bash and sandbox_write are the ONLY
 way to touch it - you have no other file or shell access.
 
-The theme is: {theme}
+There are two themes and you choose one:
+  time  - {timeTheme}
+  color - {colorTheme}
+
+Each theme holds three agents, first come first served. Call pick_theme early;
+if the one you want fills up you will have to take the other.
 
 Rules:
 - You have {minutes} minutes of build time. It is enforced; when it ends your
   work stops wherever it is.
 - Your submission must be a running dev server on port 3000.
 - Call submit only after you have verified the server responds.
-- The other agents are {others}. You may message them. They can see the same
-  theme and are building at the same time.
+- The other agents are {others}. You may message any of them. You are judged
+  only against the two who share your theme.
 
 Work directly. Do not ask for confirmation - nobody is watching in real time.
 ```
@@ -359,15 +420,19 @@ networking** for agent messaging - it goes through the orchestrator.
 The spine. Everything else is a renderer over it.
 
 ```ts
+type AgentId = 'ada' | 'rex' | 'juno' | 'iris' | 'otto' | 'vera'
+type Track = 'time' | 'color'
+
 type AgentEvent = {
   seq: number
   ts: number
-  agentId: 'ada' | 'rex' | 'juno'
-  kind: 'thought' | 'message' | 'build' | 'submit' | 'phase' | 'score'
+  agentId: AgentId
+  kind: 'thought' | 'message' | 'build' | 'theme' | 'submit' | 'phase' | 'score'
   body: string
-  targetId?: string
+  track?: Track
+  targetId?: AgentId
   previewUrl?: string
-  score?: { mechanical: number; creative: number }
+  score?: { mechanical: number; creative: number; rank: number }
 }
 ```
 
@@ -395,11 +460,18 @@ fixture file in the first ten minutes and build against that.
 
 ## Risks
 
-- **Token spend.** Three Opus agents at 40 turns each is the real budget, not
-  Daytona compute. Develop against a fixture log; only run real agents when
-  testing the agent loop itself. If spend becomes the constraint,
-  `claude-sonnet-5` is the lever, and that is a deliberate call to make, not a
-  default.
+- **Token spend, now the binding constraint.** Six Opus agents at 40 turns each
+  is roughly double the three-agent design and is the real budget, not Daytona
+  compute. Develop against a fixture log and only run real agents when testing
+  the agent loop itself. Levers in the order I would pull them: cut `maxTurns`
+  to 25, drop to four agents across two tracks, then move to
+  `claude-sonnet-5`. Running some agents on a cheaper model than others also
+  works but makes "which agent won" a weaker signal, so treat it as a demo
+  shortcut rather than a real result.
+- **Concurrency.** Six sandboxes and six streaming generators at once. Daytona
+  advertises massive parallelisation so the sandboxes are fine, but cap
+  orchestrator concurrency anyway and confirm the account's sandbox limit
+  before the first full run rather than discovering it at 14:00.
 - **Preview URL not ready at submit time.** The dev server may not be listening
   the instant the agent calls `submit`. Poll the URL for up to 10s inside the
   `submit` tool before recording a failure.
