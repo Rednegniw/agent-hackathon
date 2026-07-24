@@ -13,7 +13,7 @@ importers:
       '@anthropic-ai/claude-agent-sdk':
         specifier: ^0.3.219
         version: 0.3.219(@anthropic-ai/sdk@0.115.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)
-      '@daytonaio/sdk':
+      '@daytona/sdk':
         specifier: ^0.200.1
         version: 0.200.1(ws@8.21.1)
       dotenv:
@@ -221,12 +221,11 @@ packages:
   '@daytona/api-client@0.200.1':
     resolution: {integrity: sha512-jn+s51MTK+CxiOoIMZyAO8kGsi7PpkMQQuuFyvl15ausKqxFcBgc7mO70QeEZe4AnZo0fX5q081yaIWDDxgKHQ==}
 
+  '@daytona/sdk@0.200.1':
+    resolution: {integrity: sha512-jDt57tpHmkuPxJANdaRX5CSkzmU9TTd+72PC+xo8j8Lo2qBs3bEfiIFCNmcq19CKiNSGegq2c+SPAEo8feI0xg==}
+
   '@daytona/toolbox-api-client@0.200.1':
     resolution: {integrity: sha512-oK2+8HwCCHSdrR1KdvG/pfPrCAyKeapqhHkfsnGn2D8YRZqdWqfVWgY4C0pmzWDqF0KKug/DLAtqpkNckCDR9Q==}
-
-  '@daytonaio/sdk@0.200.1':
-    resolution: {integrity: sha512-9fGS6aLtnLpxECtTOxd4IVPn2EkxqqnLX4rB1CvOkD4Z2MmL2+N4orxlq74YC0PggIetdVydwTIPjYLDq3XSZg==}
-    deprecated: 'Moved to @daytona/sdk, same API, no breaking changes. Please update: npm uninstall @daytonaio/sdk && npm i @daytona/sdk'
 
   '@emnapi/core@1.11.1':
     resolution: {integrity: sha512-RSvbQmHzdKzNsLYa/wHrbc3KN4sYLKAdPZxqiM2HATqv/SBk2/ENSHpvXGaLOMcsAyz0poEGqkmmKYG3OWiJEQ==}
@@ -2256,14 +2255,7 @@ snapshots:
       - debug
       - supports-color
 
-  '@daytona/toolbox-api-client@0.200.1':
-    dependencies:
-      axios: 1.18.1
-    transitivePeerDependencies:
-      - debug
-      - supports-color
-
-  '@daytonaio/sdk@0.200.1(ws@8.21.1)':
+  '@daytona/sdk@0.200.1(ws@8.21.1)':
     dependencies:
       '@aws-sdk/client-s3': 3.1095.0
       '@aws-sdk/lib-storage': 3.1095.0(@aws-sdk/client-s3@3.1095.0)
@@ -2296,6 +2288,13 @@ snapshots:
       - supports-color
       - utf-8-validate
       - ws
+
+  '@daytona/toolbox-api-client@0.200.1':
+    dependencies:
+      axios: 1.18.1
+    transitivePeerDependencies:
+      - debug
+      - supports-color
 
   '@emnapi/core@1.11.1':
     dependencies:

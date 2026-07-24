@@ -151,7 +151,7 @@ homemade version first.
 ### Package
 
 ```
-pnpm --filter arena add @anthropic-ai/claude-agent-sdk zod @daytonaio/sdk
+pnpm --filter arena add @anthropic-ai/claude-agent-sdk zod @daytona/sdk
 ```
 
 Verified API surface from the Agent SDK docs:
@@ -360,7 +360,7 @@ exact field on `PortPreviewUrl` that holds the signed URL. Read these from the
 installed package's types rather than guessing:
 
 ```bash
-cat node_modules/@daytonaio/sdk/dist/*.d.ts | grep -A5 "executeCommand\|getPreviewLink"
+cat node_modules/@daytona/sdk/dist/*.d.ts | grep -A5 "executeCommand\|getPreviewLink"
 ```
 
 ### The snapshot

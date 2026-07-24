@@ -1,5 +1,5 @@
 import './env.js'
-import { Daytona } from '@daytonaio/sdk'
+import { Daytona } from '@daytona/sdk'
 
 /**
  * Deletes sandboxes left behind by KEEP_ALIVE runs. Those have auto-stop

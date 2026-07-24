@@ -16,7 +16,7 @@ inside the first ten minutes so he never waits on Daytona.
 
 ## Verified facts
 
-Everything here was measured against `@daytonaio/sdk@0.200.1` and a live sandbox
+Everything here was measured against `@daytona/sdk@0.200.1` and a live sandbox
 on 2026-07-24, not read off a docs page. Where this contradicts SPEC.md, this
 document is right.
 
@@ -386,7 +386,7 @@ Unit tests for the phase clock and track claiming were in an earlier draft and
 are **cut**. The logic is thirty lines and rungs 1 and 2 exercise both. With the
 time left, a test runner is setup cost we do not get back.
 
-**Toolchain does not exist yet.** `package.json` has only `@daytonaio/sdk` and
+**Toolchain does not exist yet.** `package.json` has only `@daytona/sdk` and
 `dotenv`. Before any of this is runnable: a TS runner (`tsx`), a server for the
 SSE route, and the agent SDK plus `zod` for Patrik's lane. Do that install once,
 first, rather than discovering it three times.

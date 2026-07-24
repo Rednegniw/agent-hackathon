@@ -6,7 +6,7 @@
  */
 import { fileURLToPath } from 'node:url'
 import { config as loadEnv } from 'dotenv'
-import { Daytona } from '@daytonaio/sdk'
+import { Daytona } from '@daytona/sdk'
 
 // Secrets live in the repo-root .env, shared by every workspace package.
 loadEnv({ path: fileURLToPath(new URL('../../.env', import.meta.url)) })

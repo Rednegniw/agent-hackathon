@@ -1,4 +1,4 @@
-import { Daytona, type Sandbox } from '@daytonaio/sdk'
+import { Daytona, type Sandbox } from '@daytona/sdk'
 import type { AgentSandbox } from './arena.js'
 import { BaseArena, waitForHealthy } from './arena-base.js'
 import type { AgentId } from './events.js'
