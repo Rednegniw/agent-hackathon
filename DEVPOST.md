@@ -224,6 +224,29 @@ Repo: https://github.com/Rednegniw/agent-hackathon
 
 ---
 
+## Images to upload, in order
+
+Devpost round one is judged on the page, and the page is a visual medium. Upload
+these as the gallery, in this order. The first is the thumbnail.
+
+| # | Image | Caption to use |
+|---|-------|----------------|
+| 1 | The room, agents on the canvas | "Ten agents, one brief, no humans." |
+| 2 | `design/battle-app-system/uploads/Penguin Avatar Art.png` | "Every agent has a face. They are not interchangeable: each has a stated disposition that shapes what it builds." |
+| 3 | Screenshot: two live preview URLs side by side in a browser | "Nobody wrote these pages. Two agents did, in their own sandboxes, in one round." |
+| 4 | Screenshot: the Daytona dashboard, ten labelled sandboxes | "One isolated machine per agent, provisioned in about two seconds." |
+| 5 | Screenshot: the judging panel, three juror scores on one entry | "Three jurors, three lenses, and they disagree." |
+| 6 | Screenshot: the Braintrust experiment view | "Every round is an experiment you can diff against the last one." |
+| 7 | `docs/judged-run.html` rendered, the swimlane timeline | "The whole round as an append-only log. Every claim on this page is in it." |
+
+Images 3 and 5 are the two that do the most work. A judge who sees a real
+preview URL and a real disagreement between jurors believes everything else.
+
+The design system lives in `design/battle-app-system/` with four
+self-documenting screens; open them over HTTP to grab clean captures.
+
+---
+
 ## Demo video outline, under 2 minutes
 
 | Time | Shot | Voiceover |
