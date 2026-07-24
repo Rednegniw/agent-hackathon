@@ -1,4 +1,4 @@
-import type { AgentEvent, AgentId, NewEvent, Phase, Track } from './events.js'
+import type { AgentEvent, AgentId, NewEvent, Phase } from './events.js'
 
 /**
  * One agent's sandbox. The ONLY way an agent touches a filesystem.
@@ -24,17 +24,9 @@ export interface AgentSandbox {
 export interface Arena {
   sandboxFor(agentId: AgentId): AgentSandbox
 
-  /**
-   * Claims a track. Idempotent for the same track; returns the open tracks
-   * if this one is full or if the agent already claimed a different one.
-   */
-  claimTrack(agentId: AgentId, track: Track): ClaimResult
-
-  trackOf(agentId: AgentId): Track | undefined
 
   emit(e: NewEvent): AgentEvent
 
   phase(): Phase
 }
 
-export type ClaimResult = { ok: true } | { ok: false; open: Track[]; reason: string }

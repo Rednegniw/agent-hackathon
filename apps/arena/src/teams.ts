@@ -1,4 +1,4 @@
-import { AGENT_IDS, type AgentId, type Track } from './events.js'
+import { AGENT_IDS, type AgentId } from './events.js'
 
 /**
  * Team formation.
@@ -23,8 +23,7 @@ export const TEAMS_ENABLED = TEAM_MAX > 1
 export interface Team {
   id: string
   members: AgentId[]
-  track?: Track
-  /** The shared sandbox: the first member's. One team ships one artifact. */
+  /** Speaks for the team when it presents and is crowned. */
   owner: AgentId
 }
 
@@ -42,7 +41,7 @@ export class TeamRoster {
     return id ? this.#teams.get(id) : undefined
   }
 
-  /** Agents on a team but not its owner do not get their own sandbox. */
+  /** The member who speaks for the team. */
   isOwner(agentId: AgentId): boolean {
     return this.teamOf(agentId)?.owner === agentId
   }
@@ -127,7 +126,7 @@ export class TeamRoster {
 
   describe(): string {
     return this.teams()
-      .map((t) => `${t.id}: ${t.members.join(', ')}${t.track ? ` [${t.track}]` : ''}`)
+      .map((t) => `${t.id}: ${t.members.join(', ')}`)
       .join('\n')
   }
 }

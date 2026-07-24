@@ -11,7 +11,6 @@ import type { AgentEvent, AgentId } from './events.js'
  */
 export interface AgentTrace {
   agentId: AgentId
-  track?: string
   title?: string
   pitch?: string
   previewUrl?: string
@@ -31,7 +30,6 @@ export interface AgentTrace {
 export function traceFor(events: AgentEvent[], agentId: AgentId): AgentTrace {
   const mine = events.filter((e) => e.agentId === agentId)
   const submit = mine.find((e) => e.kind === 'submit')
-  const theme = mine.find((e) => e.kind === 'theme')
   const builds = mine.filter((e) => e.kind === 'build')
 
   const bytes = builds.reduce((sum, e) => {
@@ -41,7 +39,6 @@ export function traceFor(events: AgentEvent[], agentId: AgentId): AgentTrace {
 
   return {
     agentId,
-    track: theme?.track,
     pitch: submit?.body,
     previewUrl: submit?.previewUrl,
     actions: builds.map((e) => e.body),
@@ -57,7 +54,6 @@ export function traceFor(events: AgentEvent[], agentId: AgentId): AgentTrace {
 export function renderTrace(t: AgentTrace): string {
   const lines = [
     `AGENT: ${t.agentId}`,
-    `LANE: ${t.track ?? 'none'}`,
     `PITCH: ${t.pitch ?? '(never submitted)'}`,
     `SHIPPED: ${t.previewUrl ?? 'nothing'}`,
     `BYTES WRITTEN: ${t.bytesWritten}`,
@@ -81,10 +77,9 @@ export function submittedAgents(events: AgentEvent[]): AgentId[] {
 /**
  * One trace for a whole team.
  *
- * A team shares its owner's sandbox, so its members' actions are already
- * interleaved in one box. Judging them separately would enter the same
- * artifact two or three times and score it twice, and each member would
- * present a near-identical case built from the same shared history.
+ * Teammates each have their own sandbox and coordinate by message, so this
+ * merges their separate records into the single story the jurors should judge:
+ * one entry, one presentation, one score.
  */
 export function traceForTeam(events: AgentEvent[], members: AgentId[], label: string): AgentTrace {
   const parts = members.map((m) => traceFor(events, m))
@@ -92,7 +87,6 @@ export function traceForTeam(events: AgentEvent[], members: AgentId[], label: st
 
   return {
     agentId: label as AgentId,
-    track: submitted.track,
     pitch: submitted.pitch,
     previewUrl: submitted.previewUrl,
 

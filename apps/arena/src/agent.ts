@@ -1,16 +1,15 @@
 import { createSdkMcpServer, query, tool, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod'
 import type { Arena } from './arena.js'
-import { AGENT_IDS, TRACKS, type AgentId } from './events.js'
+import { AGENT_IDS, type AgentId } from './events.js'
 import type { Inbox } from './inbox.js'
 import { refuse } from './phases.js'
-import { LANES_DIFFER, THEMES, TOPIC, describeTopic } from './topic.js'
+import { TOPIC } from './topic.js'
 import { TEAM_MAX, TEAM_MIN, type TeamRoster } from './teams.js'
 
 /** Tool names as Claude sees them: mcp__{server}__{tool}. */
 const SERVER = 'arena'
 export const ARENA_TOOLS = [
-  'pick_theme',
   'form_team',
   'sandbox_bash',
   'sandbox_write',
@@ -18,7 +17,7 @@ export const ARENA_TOOLS = [
   'submit',
 ].map((t) => `mcp__${SERVER}__${t}`)
 
-export { THEMES, TOPIC }
+export { TOPIC }
 
 export const PERSONAS: Record<AgentId, string> = {
   ada: 'You are systems-minded. You prefer correctness and edge cases over polish.',
@@ -51,23 +50,6 @@ function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster, inbox?: 
     name: SERVER,
     version: '1.0.0',
     tools: [
-      tool(
-        'pick_theme',
-        'Choose which theme you will build for. Each theme holds at most three agents, ' +
-          'first come first served. Call this early. If it is full you must pick again.',
-        { theme: z.enum(TRACKS) },
-        async ({ theme }) => {
-          const blocked = gate('pick_theme', ['mingle'])
-          if (blocked) return err(blocked)
-
-          const res = arena.claimTrack(agentId, theme)
-          if (!res.ok) return err(`${res.reason}. Still open: ${res.open.join(', ') || 'nothing'}.`)
-
-          arena.emit({ agentId, kind: 'theme', body: theme, track: theme })
-          return ok(`You are in lane "${theme}". Brief: ${THEMES[theme]}`)
-        },
-      ),
-
       tool(
         'sandbox_bash',
         'Run a shell command in your own Linux sandbox. Node, npm, python3 and git are installed. ' +
@@ -112,8 +94,8 @@ function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster, inbox?: 
 
       tool(
         'form_team',
-        `Team up with other agents. Teams hold ${TEAM_MIN} to ${TEAM_MAX} agents and share one ` +
-          `sandbox, so a team ships one project together and is judged as one entry. ` +
+        `Team up with other agents. Teams hold ${TEAM_MIN} to ${TEAM_MAX} agents and are judged ` +
+          `together as one entry. You each keep your own sandbox, so agree who builds what. ` +
           `Talk to the others with send_message first, then whoever is agreed calls this once ` +
           `naming everyone. Anyone still teamless when mingle ends is grouped automatically.`,
         { members: z.array(z.string()).describe('Every agent on the team, including yourself') },
@@ -134,7 +116,7 @@ function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster, inbox?: 
 
           // Tell the others, or they are on a team they never heard about.
           for (const m of others) {
-            inbox?.post(m, agentId, `I formed ${res.team.id} with ${res.team.members.join(', ')}. I own the shared sandbox, so send me what to build.`)
+            inbox?.post(m, agentId, `I formed ${res.team.id} with ${res.team.members.join(', ')}. We are judged as one entry, so let us split the work.`)
           }
           return ok(`Formed ${res.team.id} with ${res.team.members.join(', ')}. You own the sandbox.`)
         },
@@ -176,7 +158,6 @@ function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster, inbox?: 
               agentId,
               kind: 'submit',
               body: pitch,
-              track: arena.trackOf(agentId),
               previewUrl: url,
             })
             return ok(`Submitted "${title}". Live at ${url}. You are done.`)
@@ -201,17 +182,10 @@ single entry but each has their own sandbox, so use send_message to agree who bu
 than duplicating each other's work.
 
 The brief:
-${describeTopic()}
-
-There are two lanes, ${TRACKS.join(' and ')}. You choose one. ${
-    LANES_DIFFER
-      ? 'They have different briefs, so pick the one you want to answer.'
-      : 'They answer the same brief, so the lane only decides who you are ranked against.'
-  }
+  ${TOPIC}
 
 How the round works:
-1. Call pick_theme immediately. Each lane holds three agents, first come first served.
-2. Build a single self-contained page and serve it on port 3000.
+1. Build a single self-contained page and serve it on port 3000.
 3. Verify it responds, then call submit with a one-sentence pitch.
 
 Rules that matter:
@@ -271,7 +245,7 @@ export async function runAgent(
   inbox?: Inbox,
   isOpen: () => boolean = () => false,
 ): Promise<void> {
-  const opening = `The round has started. You are ${id}. Pick your theme now, then build and submit.`
+  const opening = `The round has started. You are ${id}. Build something and submit it before time runs out.`
 
   const res = query({
     prompt: inbox ? conversation(id, opening, inbox, isOpen) : opening,

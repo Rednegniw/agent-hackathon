@@ -48,8 +48,6 @@ clock.onPhase(async (phase) => {
   console.log(`[phase] ${phase}`)
 
   if (phase === 'build') {
-    arena.assignStragglers(ROSTER)
-
     if (teams) {
       const settled = teams.settle(ROSTER)
 
@@ -102,7 +100,7 @@ const main = async () => {
 
     const subs = log.all().filter((e) => e.kind === 'submit')
     console.log(`\n[real] ${subs.length}/${ROSTER.length} submitted`)
-    for (const s of subs) console.log(`  ${s.agentId} [${s.track}] ${s.previewUrl}`)
+    for (const s of subs) console.log(`  ${s.agentId}  ${s.previewUrl}`)
 
     // The evaluator round: agents present, jurors score, a winner is crowned.
     if (process.env.SKIP_JUDGING !== '1') {

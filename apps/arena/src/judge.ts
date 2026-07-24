@@ -117,7 +117,7 @@ async function present(trace: AgentTrace, arena: Arena, entry: Entry): Promise<s
   )
 
   const speech = text.trim().slice(0, 600)
-  arena.emit({ agentId: entry.voice, kind: 'present', body: speech, track: trace.track as never })
+  arena.emit({ agentId: entry.voice, kind: 'present', body: speech })
   return speech
 }
 
@@ -192,7 +192,7 @@ async function scoreOne(
     agentId: entry.voice,
     kind: 'verdict',
     body: `${judge.id} on ${entry.label}: ${total}/30 - ${comment}`,
-    score: { mechanical: 0, creative: total, rank: 0 },
+    score: { points: total, rank: 0 },
   })
 
   return { judge: judge.id, agentId: entry.label as AgentId, scores, total, comment }
@@ -294,7 +294,7 @@ export async function runEvaluation(
       agentId: v.voice,
       kind: 'score',
       body: `${v.agentId}: rank ${i + 1} of ${verdicts.length}, ${v.total}/${JUDGES.length * CRITERIA.length * 10}`,
-      score: { mechanical: 0, creative: v.total, rank: i + 1 },
+      score: { points: v.total, rank: i + 1 },
     })
   })
 

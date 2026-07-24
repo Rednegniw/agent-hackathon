@@ -8,10 +8,9 @@
 export const AGENT_IDS = ['ada', 'rex', 'juno', 'iris', 'otto', 'vera'] as const
 export type AgentId = (typeof AGENT_IDS)[number]
 
-export type Track = 'alpha' | 'beta'
 export type Phase = 'idle' | 'mingle' | 'build' | 'submit' | 'judged'
 
-export type EventKind = 'thought' | 'message' | 'build' | 'theme' | 'submit' | 'phase' | 'score'
+export type EventKind = 'thought' | 'message' | 'build' | 'submit' | 'phase' | 'score'
 
 export interface AgentEvent {
   seq: number
@@ -19,7 +18,6 @@ export interface AgentEvent {
   agentId: AgentId | 'system'
   kind: EventKind
   body: string
-  track?: Track
   targetId?: AgentId
   previewUrl?: string
   audioUrl?: string
@@ -33,7 +31,6 @@ export interface ArenaStatus {
   arena: 'fake' | 'daytona' | null
   roundId: string | null
   phase: Phase
-  tracks: Record<string, Track>
   startedAt: number | null
   finishedAt: number | null
   error: string | null

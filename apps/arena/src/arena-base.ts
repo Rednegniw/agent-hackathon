@@ -1,11 +1,10 @@
-import type { Arena, AgentSandbox, ClaimResult } from './arena.js'
-import { TRACKS, TRACK_CAPACITY, type AgentEvent, type AgentId, type NewEvent, type Phase, type Track } from './events.js'
+import type { Arena, AgentSandbox } from './arena.js'
+import type { AgentEvent, AgentId, NewEvent, Phase } from './events.js'
 import type { EventLog } from './log.js'
 import type { PhaseClock } from './phases.js'
 
 /** Logic shared by the fake and real arenas. Only sandboxFor differs. */
 export abstract class BaseArena implements Arena {
-  protected tracks = new Map<AgentId, Track>()
 
   constructor(
     protected log: EventLog,
@@ -22,59 +21,13 @@ export abstract class BaseArena implements Arena {
     return this.clock.phase()
   }
 
-  trackOf(agentId: AgentId): Track | undefined {
-    return this.tracks.get(agentId)
-  }
 
-  openTracks(): Track[] {
-    return TRACKS.filter((t) => this.countIn(t) < TRACK_CAPACITY)
-  }
 
-  countIn(track: Track): number {
-    let n = 0
-    for (const t of this.tracks.values()) if (t === track) n++
-    return n
-  }
 
-  claimTrack(agentId: AgentId, track: Track): ClaimResult {
-    const existing = this.tracks.get(agentId)
 
-    /**
-     * Idempotent ONLY for the same track. Returning ok for a different one
-     * would let the tool emit a `theme` event that disagrees with trackOf(),
-     * so the office and the per-track judge would file the entry under the
-     * wrong brief. Models do call this twice.
-     */
-    if (existing) {
-      return existing === track
-        ? { ok: true }
-        : { ok: false, open: this.openTracks(), reason: `you already committed to "${existing}"` }
-    }
 
-    if (this.countIn(track) >= TRACK_CAPACITY) {
-      return { ok: false, open: this.openTracks(), reason: `"${track}" is full` }
-    }
-
-    this.tracks.set(agentId, track)
-    return { ok: true }
-  }
-
-  /**
-   * End of mingle: anyone who never picked goes to the emptier track.
-   * A missing pick must never stall the round.
-   */
-  assignStragglers(all: readonly AgentId[]) {
-    for (const id of all) {
-      if (this.tracks.get(id)) continue
-
-      const target = [...TRACKS].sort((a, b) => this.countIn(a) - this.countIn(b))[0]
-      this.tracks.set(id, target)
-      this.emit({ agentId: id, kind: 'theme', body: target, track: target })
-    }
-  }
-
-  snapshot(): Record<string, Track> {
-    return Object.fromEntries(this.tracks)
+  snapshot(): Record<string, string> {
+    return {}
   }
 }
 

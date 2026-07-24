@@ -8,15 +8,11 @@ export const AGENT_IDS = ['ada', 'rex', 'juno', 'iris', 'otto', 'vera'] as const
 export type AgentId = (typeof AGENT_IDS)[number]
 
 /**
- * Two lanes, deliberately named for nothing. The brief lives in TOPIC
- * (see topic.ts) and is the same for both by default, so a track is a heat
- * rather than a category. Naming them after subjects was a mistake: the
- * moment the brief changed, the names lied.
+ * There is one brief and one field. Lanes existed to keep entries comparable
+ * when there were two different themes; with a single broad TOPIC they only
+ * split the field arbitrarily and gave the judges two pools where one was
+ * fairer.
  */
-export const TRACKS = ['alpha', 'beta'] as const
-export type Track = (typeof TRACKS)[number]
-
-export const TRACK_CAPACITY = 3
 
 export type Phase = 'idle' | 'mingle' | 'build' | 'submit' | 'judging' | 'judged'
 
@@ -24,7 +20,6 @@ export type EventKind =
   | 'thought' // agent reasoning, streamed from the assistant turn
   | 'message' // agent to agent, always mediated by the orchestrator
   | 'build' // a command ran or a file was written
-  | 'theme' // agent claimed a lane
   | 'team' // agents formed a team
   | 'submit' // agent shipped, carries previewUrl
   | 'present' // agent's case to the judges, argued from its own trace
@@ -46,11 +41,10 @@ export interface AgentEvent {
   kind: EventKind
   body: string
 
-  track?: Track
   targetId?: AgentId
   previewUrl?: string
   audioUrl?: string
-  score?: { mechanical: number; creative: number; rank: number }
+  score?: { points: number; rank: number }
 }
 
 /** What callers pass to emit(). seq and ts are assigned by the log. */

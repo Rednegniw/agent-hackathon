@@ -1,7 +1,7 @@
 import type { BaseArena } from './arena-base.js'
 import { DaytonaArena, KEEP_ALIVE } from './arena-daytona.js'
 import { FakeArena } from './arena-fake.js'
-import { AGENT_IDS, TRACKS, type AgentId, type Track } from './events.js'
+import { AGENT_IDS, type AgentId } from './events.js'
 import type { EventLog } from './log.js'
 import { PhaseClock, sequenceAt, sleep } from './phases.js'
 
@@ -35,14 +35,6 @@ const helloPage = (id: AgentId) =>
 <h1>Hello world</h1>
 <p>from ${id}</p>`
 
-const PICKS: Record<AgentId, Track> = {
-  ada: 'alpha',
-  rex: 'beta',
-  juno: 'alpha',
-  iris: 'beta',
-  otto: 'alpha',
-  vera: 'beta',
-}
 
 export interface StartOptions {
   arena: ArenaKind
@@ -77,7 +69,6 @@ export interface RoundStatus {
   arena: ArenaKind | null
   roundId: string | null
   phase: string
-  tracks: Record<string, Track>
   startedAt: number | null
   finishedAt: number | null
   error: string | null
@@ -109,7 +100,6 @@ export class RoundRunner {
       arena: this.#kind,
       roundId: this.#roundId,
       phase: this.#clock?.phase() ?? 'idle',
-      tracks: this.#arena?.snapshot() ?? {},
       startedAt: this.#startedAt,
       finishedAt: this.#finishedAt,
       error: this.#error,
@@ -160,8 +150,7 @@ export class RoundRunner {
        * settled. Nothing is created for an agent that never got going.
        */
       if (phase === 'build') {
-        arena.assignStragglers(AGENT_IDS)
-        if (arena instanceof DaytonaArena) await arena.provision(AGENT_IDS)
+            if (arena instanceof DaytonaArena) await arena.provision(AGENT_IDS)
       }
     })
 
@@ -207,21 +196,9 @@ export class RoundRunner {
     await sleep(300 + Math.floor(Math.random() * 900))
 
     // ---- mingle ----
-    this.#log.emit({ agentId: id, kind: 'thought', body: `Weighing ${TRACKS.join(' against ')}.` })
+    this.#log.emit({ agentId: id, kind: 'thought', body: 'Sizing up the brief.' })
 
-    const want = PICKS[id]
-    const res = arena.claimTrack(id, want)
-
-    if (res.ok) {
-      this.#log.emit({ agentId: id, kind: 'theme', body: want, track: want })
-    } else {
-      const fallback = res.open[0]
-      this.#log.emit({ agentId: id, kind: 'thought', body: `${res.reason}. Taking ${fallback}.` })
-      arena.claimTrack(id, fallback)
-      this.#log.emit({ agentId: id, kind: 'theme', body: fallback, track: fallback })
-    }
-
-    const rival = AGENT_IDS.find((o) => o !== id && PICKS[o] === arena.trackOf(id))
+    const rival = AGENT_IDS.find((o) => o !== id)
     if (rival) {
       this.#log.emit({ agentId: id, kind: 'message', targetId: rival, body: 'Shipping a hello world. You?' })
     }
@@ -256,7 +233,6 @@ export class RoundRunner {
         agentId: id,
         kind: 'submit',
         body: 'Hello world, shipped.',
-        track: arena.trackOf(id),
         previewUrl: url,
       })
     } catch (err) {

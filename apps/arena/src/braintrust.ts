@@ -30,15 +30,7 @@ export async function logToBraintrust(verdicts: Verdict[], events: AgentEvent[])
     for (const v of verdicts) {
       const trace = traceFor(events, v.agentId)
 
-      /** Mechanical checks: deterministic, no model involved. */
-      const shipped = trace.previewUrl ? 1 : 0
-      const substantial = trace.bytesWritten > 500 ? 1 : 0
-
-      const scores: Record<string, number> = {
-        shipped,
-        substantial,
-        mechanical: (shipped + substantial) / 2,
-      }
+      const scores: Record<string, number> = {}
 
       // Per-criterion means across the panel, normalised to 0-1.
       for (const c of CRITERIA) {
@@ -48,7 +40,7 @@ export async function logToBraintrust(verdicts: Verdict[], events: AgentEvent[])
       scores.panel_total = v.total / (JUDGES.length * CRITERIA.length * 10)
 
       experiment.log({
-        input: { brief: TOPIC, agent: v.agentId, lane: trace.track },
+        input: { brief: TOPIC, agent: v.agentId },
         output: {
           previewUrl: trace.previewUrl,
           pitch: trace.pitch,
