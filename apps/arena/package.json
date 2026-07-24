@@ -10,6 +10,7 @@
     "smoke": "node smoke.mjs",
     "smoke:studio": "tsx src/smoke-studio.ts",
     "smoke:teams": "tsx src/smoke-teams.ts",
+    "peek": "tsx src/peek.ts",
     "cleanup": "tsx src/cleanup.ts",
     "real": "tsx src/real.ts",
     "replay": "tsx src/replay.ts"
