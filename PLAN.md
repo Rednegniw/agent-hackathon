@@ -63,8 +63,80 @@ Relevant API surface: `Daytona.create`, `sandbox.process`, `sandbox.fs`,
 | 13:00-13:30 | First integration. Real events into the real office. |
 | 13:30-14:00 | **Submit a Devpost draft.** Editable until deadline. |
 | 14:00-14:30 | Full run, fix what breaks. |
-| 14:30-15:00 | **Record the demo video.** Not optional, not last. |
+| 14:30-15:00 | **Record the demo video** and **build the slides.** Neither is optional. |
 | 15:00-15:30 | Finalize Devpost. Buffer. |
+| 15:30 | Submission closes. Finalists selected. |
+| 16:00 | Finalist presentations, 3 minutes each. |
+| 16:45 | Awards. |
+
+Submit at: https://daytona-hacksprint-sf-jul-2026.devpost.com/
+
+### Judging is two rounds, and the first one never sees the demo
+
+Round one is scored **on the Devpost submission alone**. Eight teams are picked
+from that to pitch. Round two is the stage pitch, 3 minutes plus 2 minutes Q&A.
+
+**The Devpost writeup is the gate, not the live demo.** Budget for it like a
+deliverable, not an afterthought. It must contain:
+
+- Team name and every member with email and socials
+- Demo video, screen recording, **under 2 minutes**
+- 2 to 3 sentence summary; the problem and its impact; key technical
+  architecture; **a list of every sponsor tool used and how it was integrated**
+- Public GitHub repo URL (this repo, already public)
+
+Weighted criteria: Impact Potential 25%, Technical Execution 25%, Creativity
+25%, Presentation 25%, Sponsor Tool Usage as a bonus.
+
+**Best Use awards are open to every team, not only the eight finalists.** Sponsor
+integrations pay off even if we do not make the pitch round.
+
+### Positioning: lead with the harness, not the office
+
+Impact Potential is 25% and it is our weakest criterion. "AI agents in a
+simulated office" reads as a toy. The same system described as **a harness for
+evaluating autonomous coding agents** reads as a real problem: run N agents
+against one brief in isolated sandboxes, score them on shipped artifacts rather
+than transcripts, and keep a replayable audit log of everything each one did.
+
+That framing is not spin. It is what the thing actually is, and it makes Daytona
+and Braintrust load-bearing rather than decorative. The pixel office is the
+interface to it. Lead with the harness in the Devpost, show the office in the
+video.
+
+### Credits: redeem before you build
+
+Codes are per participant and single-use, so each of us redeems our own from the
+**Hacker Resources** page linked in the Luma event. They are deliberately not
+checked into this repo, which is public.
+
+Order to do them in, by how long they take:
+
+1. **ElevenLabs** first. There is no code: you join the Discord, open the
+   coupon-codes channel, start a redemption, fill a form with your registration
+   email, and a bot DMs you a code. The most steps by far.
+2. **Braintrust.** The coupon only applies if you go through the **Pro upgrade
+   path** in billing settings. Redeeming outside that path silently does nothing.
+3. **Daytona.** Account, then Billing Dashboard, then redeem.
+4. **CopilotKit**, only if we take the stretch: `npx copilotkit@latest license`.
+
+Skip WorkOS. It requires adding a credit card and emailing their credits team,
+and there is no WorkOS prize category.
+
+### Slides are a required deliverable
+
+The brief is explicit: three minutes, "impactful slides outlining your idea,
+advantages, and safeguards," plus a live showcase "proving your agent operates
+safely and drives meaningful results." Five slides is plenty:
+
+1. The idea, in one sentence and one screenshot of the office.
+2. How it works: six agents, two tracks, one Daytona sandbox each.
+3. **Safeguards.** Straight from the safety section of the spec. The brief asks
+   for this twice, so it is not padding.
+4. What the agents actually shipped: the winning preview URLs, live.
+5. How we scored it: the Braintrust eval view.
+
+Slide 3 is the one most teams will skip. Do not skip it.
 
 ## Cut list
 

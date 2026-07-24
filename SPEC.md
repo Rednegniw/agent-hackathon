@@ -415,6 +415,68 @@ networking** for agent messaging - it goes through the orchestrator.
 
 ---
 
+## ElevenLabs: six voices
+
+Not narration of the thought stream. Voicing every thought is a latency and
+noise disaster and it buries the moment that matters. Instead:
+
+**Each agent has a fixed, distinct voice**, assigned once in config next to its
+persona. Six voice ids, chosen to be tellable apart. The voice is part of the
+character, the same way the avatar is.
+
+**Two moments are voiced, and only two:**
+
+1. **The pick.** When `pick_theme` succeeds, one short line: "I'm taking colour."
+   Six of these, spread across the mingle phase. This is what makes the office
+   feel inhabited.
+2. **The pitch.** At `submit`, the agent supplies a one-sentence pitch as part of
+   the tool call, and that is voiced in full. Six clips, each a few seconds. This
+   is the demo's centrepiece: six agents pitching their own work in their own
+   voices.
+
+Extend the `submit` tool with a `pitch` field:
+
+```ts
+{
+  port: z.number().int().min(3000).max(9999),
+  title: z.string(),
+  description: z.string(),
+  pitch: z.string().describe(
+    'One spoken sentence pitching your project, in your own voice. This is ' +
+    'read aloud to the judges, so write it to be heard, not read.',
+  ),
+}
+```
+
+Synthesis happens **in the orchestrator, not the sandbox**, on the `submit` and
+`theme` events. Write the audio to `public/audio/{seq}.mp3` and put the path on
+the event. The frontend plays it when that event scrolls past, which means
+**replay gets voices for free** and the demo never waits on a TTS call.
+
+Failure is non-fatal: if synthesis fails, emit the event without `audioUrl` and
+render the line as text. Never let a TTS error break the round.
+
+## Braintrust: scoring as an eval
+
+The Braintrust judge is an Eval Engineer, so a thin wrapper around one prompt
+will not impress. Model the round as an actual eval: each submission is a case,
+the theme is the input, the preview URL is the output, and the scorers are the
+graded dimensions.
+
+**Code scorers, no model involved.** These are the mechanical checks from the
+rules section, moved behind Braintrust's scorer interface: preview returns 200,
+response body over 500 bytes, build log free of uncaught errors. They are
+deterministic and cheap, which is exactly what a code scorer is for.
+
+**LLM-judge scorer, per track.** Given the track's theme and its submissions,
+score originality and fit to brief, and return reasoning alongside the number.
+Never compare across tracks: each judged set answers one brief.
+
+Log every round as a Braintrust experiment. The payoff beyond the prize is that
+the eval view is a far better artifact to show on stage than a printed score, and
+it answers the "how do you know the agent did well" question that a judging panel
+of eval engineers will certainly ask.
+
 ## The event log
 
 The spine. Everything else is a renderer over it.
@@ -432,6 +494,7 @@ type AgentEvent = {
   track?: Track
   targetId?: AgentId
   previewUrl?: string
+  audioUrl?: string
   score?: { mechanical: number; creative: number; rank: number }
 }
 ```
@@ -447,23 +510,69 @@ losing state.
 
 ## Sponsor surface
 
-Seven partners: Daytona, Braintrust, ElevenLabs, Fireworks AI, WorkOS,
-CodeRabbit, CopilotKit. Depth on the one doing real work beats breadth across
-seven logos, so this is deliberate rather than exhaustive.
+There are six independently winnable **Best Use of** prizes, so breadth has real
+expected value here. It is still bounded by what three people can build well in
+the time left: a shallow integration does not win a Best Use category, it just
+costs an hour that a deep one needed.
 
-| Partner | Use | Status |
-|---------|-----|--------|
-| Daytona | One sandbox per agent, snapshot-backed, signed preview URL as the submission artifact | core |
-| Braintrust | Mechanical checks as code scorers, creative rank as an LLM-judge scorer, per track | optional, do first if ahead |
-| ElevenLabs | One voiced pitch line per agent at submit time, six clips total | optional, demo polish |
-| Fireworks AI | Not used: a second inference path makes agents unfair to each other | skipped |
-| WorkOS | Not used: the app has no end users to authenticate | skipped |
-| CopilotKit | Not used: would fight the custom office frontend rather than help it | skipped |
-| CodeRabbit | Not used: reviewing agent-generated code as a scoring input is a good fit but needs a GitHub PR pipeline we do not have | skipped, worth naming in the writeup |
+Judge composition is a live signal. Daytona, CodeRabbit and CopilotKit each have
+**two** judges in the room; Braintrust and Fireworks have one each. There is **no
+WorkOS prize**, which settles that one.
 
-**Revisit this table if the Hackers Resources page lists per-sponsor prize
-categories.** Separate bounties would make shallow integrations worth their cost,
-which inverts the reasoning above.
+### Committed
+
+| Partner | Prize | What we build |
+|---------|-------|---------------|
+| Daytona | $1,000 + $10,000 credits | One snapshot-backed sandbox per agent, lifecycle managed, signed preview URL as the submission artifact. Our deepest integration and best shot. |
+| ElevenLabs | 6 months Scale tier per team member | Six distinct agent voices. Highest-value special prize by a wide margin. |
+| Braintrust | $500 + Lego | Mechanical checks as code scorers, creative rank as an LLM-judge scorer, per track. Already load-bearing for our judging. |
+
+### Stretch, in priority order
+
+| Partner | Prize | Why it is not committed |
+|---------|-------|-------------------------|
+| CopilotKit | $500 + Meta Ray-Ban, 2 judges | A spectator sidebar over the office is a genuine fit, but it is a fourth integration competing with a working orchestrator. Take it only if the loop runs by 13:30. |
+| CodeRabbit | $1,000 + swag, 2 judges | Thematically the best fit of all: agents write code, CodeRabbit reviews it, review quality feeds the rank. Needs git push from sandboxes plus review latency. Too many failure modes for the time left. |
+| Fireworks AI | $500 + Bose, 1 judge | The interesting version is a mixed-model arena where a Fireworks-hosted agent competes against Claude agents. The blocker is real: the Claude Agent SDK will not drive a Fireworks model, so that agent needs a hand-rolled tool loop. |
+
+**Free CodeRabbit partial credit:** install the GitHub app on this repo and
+develop on branches with PRs. Reviews happen automatically, cost about five
+minutes, and give a screenshot for the slides. It is weak evidence for a Best Use
+claim but it is close to free.
+
+**Skipped: WorkOS.** No prize category, and the app has no end users to
+authenticate.
+
+## Safety and safeguards
+
+The brief asks twice for this: "safe integration with industry-relevant tools"
+and a live showcase "proving your agent operates safely." We have a real answer
+rather than a hand-wave, and it should be one slide and one line in the demo.
+
+Six autonomous agents write and execute arbitrary generated code. Every one of
+these is an architectural property, not a policy we ask the model to respect:
+
+- **Isolation per agent.** Each agent's code runs in its own Daytona sandbox with
+  a dedicated kernel, filesystem and network stack. One agent cannot read, break
+  or influence another's work.
+- **The orchestrator host is unreachable.** `tools: []` strips every built-in
+  file and shell tool from the agent's context. The only way an agent can touch a
+  filesystem is `sandbox_bash` and `sandbox_write`, both scoped to its own
+  sandbox. An agent cannot reach the machine running the loop.
+- **No agent-to-agent channel.** Sandboxes have isolated network stacks and we
+  never bridge them. Every message between agents is mediated, logged and
+  replayable through the orchestrator.
+- **Explicit allowlist.** `allowedTools` names the exact five tools. Anything
+  outside that list has no path to execution.
+- **Bounded blast radius in time.** Sandboxes are `ephemeral` with an
+  `autoStopInterval`, and torn down in a `finally`. Nothing outlives the round.
+- **Full auditability.** Every thought, command, message and submission is an
+  append-only event in `events.jsonl`. Any claim we make on stage can be replayed
+  from the log.
+
+The demo line: the office is simulated, the code is real, and the reason we can
+safely let six models run unattended is that Daytona gives each one a box it
+cannot get out of.
 
 ## Build order
 
