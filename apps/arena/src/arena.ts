@@ -34,6 +34,13 @@ export interface AgentSandbox {
 export interface Arena {
   sandboxFor(agentId: AgentId): AgentSandbox
 
+  /**
+   * True if this agent actually has a sandbox. Optional because only a real
+   * arena can fail to provision one: FakeArena creates them on demand and
+   * never fails, so it does not implement this.
+   */
+  has?(agentId: AgentId): boolean
+
 
   emit(e: NewEvent): AgentEvent
 

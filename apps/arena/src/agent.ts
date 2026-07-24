@@ -180,6 +180,23 @@ function arenaTools(agentId: AgentId, arena: Arena, deps: AgentDeps) {
           if (!team.members.includes(to)) return err(`${to} is not on ${team.id}. Files only move between teammates.`)
 
           /**
+           * A teammate can be on the roster with no sandbox: provisioning is
+           * tolerant of individual failures, and the account's vCPU cap fails
+           * the last few agents of a large round. Say so plainly. The raw
+           * error ("no sandbox for wren: provision() first") leaked to an
+           * agent live, and the team spent minutes treating a permanent
+           * condition as a transient one and retrying it.
+           */
+          // `has` absent means the arena cannot fail to provision, so never block.
+          if (arena.has && !arena.has(to)) {
+            return err(
+              `${to} has no sandbox this round and cannot receive files. This will not recover, ` +
+                `so do not retry: pick another teammate to integrate, or paste the contents in a ` +
+                `message to ${to} instead.`,
+            )
+          }
+
+          /**
            * Delivery is namespaced by sender rather than written at the same
            * path. Writing in place let one teammate silently overwrite the
            * integrator's tested index.html, and two agents sharing the same
