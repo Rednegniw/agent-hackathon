@@ -4,7 +4,10 @@
  * both depend on it, a shape change is a merge conflict at the worst moment.
  */
 
-export const AGENT_IDS = ['ada', 'rex', 'juno', 'iris', 'otto', 'vera'] as const
+export const AGENT_IDS = [
+  'ada', 'rex', 'juno', 'iris', 'otto', 'vera',
+  'milo', 'nova', 'pip', 'quill', 'sage', 'wren',
+] as const
 export type AgentId = (typeof AGENT_IDS)[number]
 
 /**
