@@ -1,4 +1,5 @@
-# Local secrets - never commit (shared .env is tracked intentionally)
+# Secrets - never commit (.env.example is the tracked template)
+.env
 .env.local
 .env.*.local
 
