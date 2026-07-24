@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/organic-566dce98-d69a-46be-b131-3ffdea8bf1bc/styles.css">
+<script src="_ds/organic-566dce98-d69a-46be-b131-3ffdea8bf1bc/_ds_bundle.js"></script>
+<script src="./image-slot.js"></script>
+<script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --font-heading: "Newsreader", Georgia, serif; --font-heading-weight: 500; }
+  html, body { margin: 0; height: 100%; background: var(--color-bg); overflow: hidden; }
+  a { color: var(--color-accent-700); }
+  a:hover { color: var(--color-accent-800); }
+  h1, h2, h3, h4 { letter-spacing: -0.01em; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; text-align: center; line-height: 1.15; font-family: var(--font-body); font-weight: 700; border: 1px solid color-mix(in srgb, #000 10%, transparent); }
+  .btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+  .btn-icon { line-height: 1; padding: 0; width: 38px; height: 38px; }
+  .btn-icon svg { width: 18px; height: 18px; stroke-width: 2.75; display: block; }
+  .btn svg { width: 15px; height: 15px; stroke-width: 2.75; }
+  .btn-primary { background-image: linear-gradient(180deg, color-mix(in srgb, #fff 12%, var(--color-accent-500)), var(--color-accent-600)); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 20%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 24%, transparent); }
+  .btn-primary:hover { background-image: linear-gradient(180deg, var(--color-accent-500), var(--color-accent-700)); }
+  .btn-primary:active { background-image: linear-gradient(180deg, var(--color-accent-600), var(--color-accent-600)); box-shadow: inset 0 1px 3px color-mix(in srgb, #000 22%, transparent); }
+  .btn-secondary { background-image: linear-gradient(180deg, var(--color-neutral-100), var(--color-neutral-200)); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 12%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent); }
+  .btn-secondary:active { box-shadow: inset 0 1px 3px color-mix(in srgb, #2e2b25 16%, transparent); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  @keyframes cardIn { from { transform: translateX(-16px); opacity: 0; filter: blur(6px); } to { transform: none; opacity: 1; filter: blur(0); } }
+  @keyframes fire { 0% { transform: translateY(0) scale(0.7); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-160px) scale(1.3); opacity: 0; } }
+</style>
+</helmet>
+
+<div style="position: relative; width: 100%; height: 100vh; overflow: hidden; background: #1b1917; font-family: var(--font-body); color: var(--color-text)">
+
+  <img src="uploads/Aquarium Room Design.png" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover">
+
+  <div style="position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; align-items: center">
+    <div style="display: flex; align-items: center; gap: 9px; background: var(--color-neutral-100); border-radius: 999px; padding: 8px 16px 8px 12px; box-shadow: var(--shadow-md); font-weight: 700; font-size: 13px">
+      <span style="width: 9px; height: 9px; border-radius: 999px; background: var(--color-accent-2-600)"></span>
+      Round 2 · Closed
+    </div>
+    <div style="background: var(--color-neutral-100); border-radius: 999px; padding: 8px 16px; box-shadow: var(--shadow-md); font-family: var(--font-heading); font-size: 13px">00:00</div>
+    <button class="btn btn-icon btn-secondary" style="border-radius: 999px" aria-label="Watch the replay"><i data-lucide="rotate-ccw"></i></button>
+  </div>
+
+  <aside style="position: absolute; top: 16px; left: 16px; width: 404px; max-height: calc(100% - 32px); background: var(--color-neutral-100); border-radius: 26px; box-shadow: var(--shadow-lg); padding: 14px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 0; flex-shrink: 0">
+      <div style="display: flex; align-items: center; gap: 9px">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-accent-700)">{{ counter }}</span>
+        <div style="display: flex; gap: 4px; align-items: center">
+          <span style="{{ dot1 }}"></span>
+          <span style="{{ dot2 }}"></span>
+          <span style="{{ dot3 }}"></span>
+        </div>
+      </div>
+      <button class="btn btn-icon btn-secondary" style="border-radius: 999px; width: 30px; height: 30px" aria-label="Close submissions"><i data-lucide="x"></i></button>
+    </div>
+
+    <div style="flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column">
+
+      <sc-if value="{{ isKelp }}" hint-placeholder-val="{{ true }}">
+        <article style="display: flex; flex-direction: column; gap: 12px; animation: cardIn 340ms cubic-bezier(.22,1,.3,1) both">
+          <div style="position: relative; height: 224px; border-radius: 18px; overflow: hidden; background: var(--color-neutral-200); flex-shrink: 0">
+            <image-slot id="reveal-shot-1" shape="rounded" radius="18" placeholder="Team Kelp — final screenshot"></image-slot>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 0 4px">
+            <div style="display: flex; align-items: center">
+              <div style="width: 30px; height: 30px; border-radius: 8px; overflow: hidden; background: var(--color-neutral-300); outline: 2px solid var(--color-neutral-100); outline-offset: -2px; box-shadow: var(--shadow-sm)"><img src="assets/avatars/teal-beanie.png" alt="Juno" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated"></div>
+              <div style="width: 30px; height: 30px; margin-left: -9px; border-radius: 8px; overflow: hidden; background: var(--color-neutral-300); outline: 2px solid var(--color-neutral-100); outline-offset: -2px; box-shadow: var(--shadow-sm)"><img src="assets/avatars/sleepy-mint.png" alt="Pip" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated"></div>
+              <div style="width: 30px; height: 30px; margin-left: -9px; border-radius: 8px; overflow: hidden; background: var(--color-neutral-300); outline: 2px solid var(--color-neutral-100); outline-offset: -2px; box-shadow: var(--shadow-sm)"><img src="assets/avatars/mint-beanie.png" alt="Wren" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated"></div>
+            </div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-size: 13px; font-weight: 700">Team Kelp</div>
+              <div style="font-size: 11px; color: color-mix(in srgb, var(--color-text) 52%, transparent)">Shipped with 0:04 left</div>
+            </div>
+            <button class="btn btn-secondary" style="border-radius: 999px; font-size: 11px; padding: 6px 12px">Trace</button>
+          </div>
+          <div style="padding: 0 4px; display: flex; flex-direction: column; gap: 8px">
+            <h2 style="margin: 0; font-family: var(--font-heading); font-size: 23px; font-weight: 500; line-height: 1.2; text-wrap: pretty">Three tiers, one hero</h2>
+            <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 68%, transparent); text-wrap: pretty">Cut the fourth tier and spent the whole budget on one warm hero. The middle plan is physically bigger, not just highlighted.</p>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px">
+              <span class="tag tag-accent">Warm</span>
+              <span class="tag tag-outline">3 revisions</span>
+            </div>
+          </div>
+        </article>
+      </sc-if>
+
+      <sc-if value="{{ isEmber }}" hint-placeholder-val="{{ false }}">
+        <article style="display: flex; flex-direction: column; gap: 12px; animation: cardIn 340ms cubic-bezier(.22,1,.3,1) both">
+          <div style="position: relative; height: 224px; border-radius: 18px; overflow: hidden; background: var(--color-neutral-200); flex-shrink: 0">
+            <image-slot id="reveal-shot-2" shape="rounded" radius="18" placeholder="Team Ember — final screenshot"></image-slot>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 0 4px">
+            <div style="display: flex; align-items: center">
+              <div style="width: 30px; height: 30px; border-radius: 8px; overflow: hidden; background: var(--color-neutral-300); outline: 2px solid var(--color-neutral-100); outline-offset: -2px; box-shadow: var(--shadow-sm)"><img src="assets/avatars/punk-pastel.png" alt="Mika" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated"></div>
+              <div style="width: 30px; height: 30px; margin-left: -9px; border-radius: 8px; overflow: hidden; background: var(--color-neutral-300); outline: 2px solid var(--color-neutral-100); outline-offset: -2px; box-shadow: var(--shadow-sm)"><img src="assets/avatars/scarf-mohawk.png" alt="Vex" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated"></div>
+              <div style="width: 30px; height: 30px; margin-left: -9px; border-radius: 8px; overflow: hidden; background: var(--color-neutral-300); outline: 2px solid var(--color-neutral-100); outline-offset: -2px; box-shadow: var(--shadow-sm)"><img src="assets/avatars/bandana-fish.png" alt="Ola" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated"></div>
+            </div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-size: 13px; font-weight: 700">Team Ember</div>
+              <div style="font-size: 11px; color: color-mix(in srgb, var(--color-text) 52%, transparent)">Shipped with 0:41 left</div>
+            </div>
+            <button class="btn btn-secondary" style="border-radius: 999px; font-size: 11px; padding: 6px 12px">Trace</button>
+          </div>
+          <div style="padding: 0 4px; display: flex; flex-direction: column; gap: 8px">
+            <h2 style="margin: 0; font-family: var(--font-heading); font-size: 23px; font-weight: 500; line-height: 1.2; text-wrap: pretty">The price is the headline</h2>
+            <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 68%, transparent); text-wrap: pretty">Numbers set in the display face at 96px. No cards, no borders — three columns of air and a single terracotta button.</p>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px">
+              <span class="tag tag-accent-2">On brief</span>
+              <span class="tag tag-outline">7 revisions</span>
+            </div>
+          </div>
+        </article>
+      </sc-if>
+
+      <sc-if value="{{ isDune }}" hint-placeholder-val="{{ false }}">
+        <article style="display: flex; flex-direction: column; gap: 12px; animation: cardIn 340ms cubic-bezier(.22,1,.3,1) both">
+          <div style="position: relative; height: 224px; border-radius: 18px; overflow: hidden; background: var(--color-neutral-200); flex-shrink: 0">
+            <image-slot id="reveal-shot-3" shape="rounded" radius="18" placeholder="Team Dune — final screenshot"></image-slot>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 0 4px">
+            <div style="display: flex; align-items: center">
+              <div style="width: 30px; height: 30px; border-radius: 8px; overflow: hidden; background: var(--color-neutral-300); outline: 2px solid var(--color-neutral-100); outline-offset: -2px; box-shadow: var(--shadow-sm)"><img src="assets/avatars/goggles-beanie.png" alt="Odin" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated"></div>
+              <div style="width: 30px; height: 30px; margin-left: -9px; border-radius: 8px; overflow: hidden; background: var(--color-neutral-300); outline: 2px solid var(--color-neutral-100); outline-offset: -2px; box-shadow: var(--shadow-sm)"><img src="assets/avatars/aviator-lilac.png" alt="Sol" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated"></div>
+              <div style="width: 30px; height: 30px; margin-left: -9px; border-radius: 8px; overflow: hidden; background: var(--color-neutral-300); outline: 2px solid var(--color-neutral-100); outline-offset: -2px; box-shadow: var(--shadow-sm)"><img src="assets/avatars/beanie-classic.png" alt="Bo" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated"></div>
+            </div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-size: 13px; font-weight: 700">Team Dune</div>
+              <div style="font-size: 11px; color: color-mix(in srgb, var(--color-text) 52%, transparent)">Submitted at the bell</div>
+            </div>
+            <button class="btn btn-secondary" style="border-radius: 999px; font-size: 11px; padding: 6px 12px">Trace</button>
+          </div>
+          <div style="padding: 0 4px; display: flex; flex-direction: column; gap: 8px">
+            <h2 style="margin: 0; font-family: var(--font-heading); font-size: 23px; font-weight: 500; line-height: 1.2; text-wrap: pretty">A seed packet, not a table</h2>
+            <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 68%, transparent); text-wrap: pretty">Each tier is a paper packet you could pick up. Stacked, slightly rotated, the middle one leaning forward off the page.</p>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px">
+              <span class="tag tag-neutral">At the buzzer</span>
+              <span class="tag tag-outline">11 revisions</span>
+            </div>
+          </div>
+        </article>
+      </sc-if>
+
+    </div>
+
+    <sc-if value="{{ heatOn }}" hint-placeholder-val="{{ true }}">
+      <div style="background: var(--color-neutral-200); border-radius: 18px; padding: 11px 13px; display: flex; align-items: center; gap: 11px; flex-shrink: 0">
+        <button style="{{ heatBtn }}" onClick="{{ like }}" aria-label="Add heat">
+          <span style="font-size: 15px">🔥</span>
+          <span>{{ myHeat }}</span>
+        </button>
+        <div style="flex: 1; min-width: 0">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 5px">
+            <span style="font-size: 11px; font-weight: 700">{{ heatLabel }}</span>
+            <span style="font-size: 10px; color: color-mix(in srgb, var(--color-text) 50%, transparent)">{{ roomHeat }}</span>
+          </div>
+          <div style="position: relative; width: 100%; height: 5px; border-radius: 999px; background: var(--color-neutral-400)">
+            <div style="{{ heatFill }}"></div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display: flex; align-items: center; gap: 12px; padding: 0 4px; flex-shrink: 0">
+      <div style="flex: 1; min-width: 0">
+        <div style="font-size: 11px; font-weight: 700">Your ranking</div>
+        <div style="font-size: 10px; color: color-mix(in srgb, var(--color-text) 50%, transparent)">{{ rankLabel }}</div>
+      </div>
+      <div style="display: flex; gap: 3px; background: var(--color-neutral-200); border-radius: 999px; padding: 3px; flex-shrink: 0">
+        <sc-for list="{{ rankOpts }}" as="r" hint-placeholder-count="5">
+          <button style="{{ r.style }}" onClick="{{ r.pick }}" aria-label="{{ r.aria }}">{{ r.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px; padding: 0 2px; flex-shrink: 0">
+      <button class="btn btn-icon btn-secondary" style="border-radius: 999px; flex-shrink: 0" onClick="{{ prev }}" disabled="{{ atStart }}" aria-label="Previous submission"><i data-lucide="chevron-left"></i></button>
+      <button class="btn btn-primary" style="border-radius: 999px; flex: 1" onClick="{{ next }}">{{ nextLabel }} <i data-lucide="arrow-right"></i></button>
+    </div>
+  </aside>
+
+  <sc-for list="{{ bursts }}" as="b" hint-placeholder-count="0">
+    <div style="{{ b.style }}">🔥</div>
+  </sc-for>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showHeat&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Reactions&quot;},&quot;heatTaps&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:5,&quot;min&quot;:1,&quot;max&quot;:10,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Reactions&quot;},&quot;rankScale&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:5,&quot;min&quot;:3,&quot;max&quot;:10,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Reactions&quot;}}">
+const TEAMS = ['Kelp', 'Ember', 'Dune'];
+const ROOM_HEAT = [128, 96, 61];
+const RANK_WORDS = ['Not scored yet', 'Missed the brief', 'Rough', 'Solid', 'Would ship it', 'Best in the room'];
+
+class Component extends DCLogic {
+  state = { idx: 0, heat: [0, 0, 0], rank: [0, 0, 0], bursts: [] };
+
+  icons = () => { if (window.lucide) window.lucide.createIcons(); };
+  componentDidMount() {
+    this.icons();
+    setTimeout(this.icons, 500);
+    this._keys = (e) => {
+      if (e.key === 'ArrowRight') this.go(1);
+      if (e.key === 'ArrowLeft') this.go(-1);
+    };
+    window.addEventListener('keydown', this._keys);
+  }
+  componentDidUpdate() { this.icons(); }
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this._keys);
+    (this._timers || []).forEach(clearTimeout);
+  }
+
+  maxHeat = () => Math.max(1, Number(this.props.heatTaps ?? 5));
+  maxRank = () => Math.max(3, Math.min(10, Number(this.props.rankScale ?? 5)));
+
+  go = (d) => this.setState(s => ({ idx: Math.max(0, Math.min(TEAMS.length - 1, s.idx + d)) }));
+
+  like = () => {
+    const i = this.state.idx;
+    if (this.state.heat[i] >= this.maxHeat()) return;
+    const id = Math.random().toString(36).slice(2);
+    const burst = {
+      id,
+      style: 'position:absolute;left:' + (40 + Math.random() * 340) + 'px;bottom:' + (90 + Math.random() * 50)
+        + 'px;font-size:32px;pointer-events:none;z-index:6;animation:fire 1500ms cubic-bezier(.22,1,.3,1) both'
+    };
+    this.setState(s => {
+      const heat = s.heat.slice();
+      heat[i] = heat[i] + 1;
+      return { heat, bursts: s.bursts.concat([burst]) };
+    });
+    this._timers = (this._timers || []).concat([
+      setTimeout(() => this.setState(s => ({ bursts: s.bursts.filter(x => x.id !== id) })), 1600)
+    ]);
+  };
+
+  setRank = (n) => () => this.setState(s => {
+    const rank = s.rank.slice();
+    rank[s.idx] = rank[s.idx] === n ? 0 : n;
+    return { rank };
+  });
+
+  dot = (i) => {
+    const active = i === this.state.idx;
+    const ranked = this.state.rank[i] > 0;
+    return 'width: 5px; height: 5px; border-radius: 999px; transition: background 200ms cubic-bezier(.22,1,.3,1); background: '
+      + (active ? 'var(--color-accent-500)' : ranked ? 'var(--color-accent-2-600)' : 'color-mix(in srgb, var(--color-text) 20%, transparent)');
+  };
+
+  raised = 'border: 1px solid color-mix(in srgb, #000 10%, transparent); background-image: linear-gradient(180deg, color-mix(in srgb, #fff 12%, var(--color-accent-500)), var(--color-accent-600)); color: var(--color-neutral-100); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 20%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 24%, transparent)';
+
+  rankStyle = (on) => 'width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-family: var(--font-body); font-size: 12px; font-weight: 700; line-height: 1; border-radius: 999px; transition: all 160ms cubic-bezier(.22,1,.3,1); '
+    + (on ? this.raised : 'background: transparent; border: 1px solid transparent; color: color-mix(in srgb, var(--color-text) 50%, transparent)');
+
+  renderVals() {
+    const i = this.state.idx;
+    const mine = this.state.heat[i];
+    const rank = this.state.rank[i];
+    const scale = this.maxRank();
+    const total = ROOM_HEAT[i] + mine;
+    const last = i === TEAMS.length - 1;
+    const opts = [];
+    for (let n = 1; n <= scale; n++) opts.push(n);
+
+    return {
+      counter: 'Submission ' + (i + 1) + ' of ' + TEAMS.length,
+      isKelp: i === 0, isEmber: i === 1, isDune: i === 2,
+      dot1: this.dot(0), dot2: this.dot(1), dot3: this.dot(2),
+      atStart: i === 0,
+      next: () => this.go(1),
+      prev: () => this.go(-1),
+      nextLabel: last ? 'See the results' : 'Next submission',
+
+      heatOn: this.props.showHeat ?? true,
+      like: this.like,
+      myHeat: mine > 0 ? '×' + mine : 'Heat',
+      heatLabel: mine === 0 ? 'Tap to heat it up' : mine >= this.maxHeat() ? 'Maxed out' : 'Tap again for more',
+      roomHeat: total + ' from the room',
+      heatFill: 'position: absolute; left: 0; top: 0; height: 100%; width: ' + Math.min(100, Math.round((total / 180) * 100))
+        + '%; border-radius: 999px; background: var(--color-accent-500); transition: width 260ms cubic-bezier(.22,1,.3,1)',
+      heatBtn: 'display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-family: var(--font-body); font-size: 12px; font-weight: 700; line-height: 1; padding: 9px 13px; border-radius: 999px; flex-shrink: 0; transition: transform 140ms cubic-bezier(.22,1,.3,1); '
+        + (mine > 0 ? this.raised
+          : 'border: 1px solid color-mix(in srgb, #000 10%, transparent); background-image: linear-gradient(180deg, var(--color-neutral-100), var(--color-neutral-200)); color: var(--color-text); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 12%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent)'),
+
+      rankOpts: opts.map(n => ({ label: n, aria: 'Rank ' + n + ' of ' + scale, style: this.rankStyle(n <= rank), pick: this.setRank(n) })),
+      rankLabel: scale === 5 ? RANK_WORDS[rank] : (rank === 0 ? 'Not scored yet' : rank + ' of ' + scale),
+
+      bursts: this.state.bursts
+    };
+  }
+}
+
+</script>
+</body>
+</html>

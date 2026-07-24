@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/organic-566dce98-d69a-46be-b131-3ffdea8bf1bc/styles.css">
+<script src="_ds/organic-566dce98-d69a-46be-b131-3ffdea8bf1bc/_ds_bundle.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --font-heading: "Newsreader", Georgia, serif; --font-heading-weight: 500; }
+  body { margin: 0; background: var(--color-bg); }
+  a { color: var(--color-accent-700); }
+  a:hover { color: var(--color-accent-800); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; text-align: center; line-height: 1.15; border: 1px solid color-mix(in srgb, #000 10%, transparent); }
+  .btn-primary { background-image: linear-gradient(180deg, color-mix(in srgb, #fff 12%, var(--color-accent-500)), var(--color-accent-600)); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 20%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 24%, transparent); }
+  .btn-primary:hover { background-image: linear-gradient(180deg, var(--color-accent-500), var(--color-accent-700)); }
+  .btn-primary:active { background-image: linear-gradient(180deg, var(--color-accent-600), var(--color-accent-600)); box-shadow: inset 0 1px 3px color-mix(in srgb, #000 22%, transparent); }
+  @keyframes popIn { from { transform: translateY(8px) scale(0.985); opacity: 0; filter: blur(5px); } to { transform: none; opacity: 1; filter: blur(0); } }
+  @keyframes popInSide { from { transform: translateX(-8px) scale(0.99); opacity: 0; filter: blur(4px); } to { transform: none; opacity: 1; filter: blur(0); } }
+  @keyframes pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+</style>
+</helmet>
+
+<div style="padding: 36px 40px 64px; display: flex; flex-direction: column; gap: 34px; font-family: var(--font-body); color: var(--color-text); max-width: 1400px; margin: 0 auto">
+
+  <header style="max-width: 620px">
+    <div style="font-weight: 700; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: 8px">Design Battle · Setup controls</div>
+    <h1 style="font-size: 36px; margin: 0 0 8px">Set the room, then let it roll the dice</h1>
+    <p style="font-size: 15px; margin: 0; color: color-mix(in srgb, var(--color-text) 60%, transparent); text-wrap: pretty">You choose how many teams, how long the combat runs, and which models and archetypes are allowed in the pool. Who ends up where is drawn at random — three models per team, one archetype each.</p>
+  </header>
+
+  <section>
+    <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px">
+      <h3 style="margin: 0; font-size: 19px">In place</h3>
+      <span style="font-size: 12px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">Setup and brief sit centered in the empty room — there is no way to start without setting up. Menus open sideways; the panel never grows.</span>
+    </div>
+
+    <div style="position: relative; height: 520px; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-lg); background: #1b1917">
+      <sc-if value="{{ roomArt }}" hint-placeholder-val="{{ true }}">
+        <img src="uploads/Image Editing from Flora.png" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.45">
+      </sc-if>
+
+      <div style="position: absolute; top: 16px; right: 16px; display: flex; align-items: center; gap: 8px; background: var(--color-neutral-100); border-radius: 999px; padding: 6px 13px 6px 10px; box-shadow: var(--shadow-md); font-weight: 700; font-size: 12px">
+        <span style="width: 8px; height: 8px; border-radius: 999px; background: #c0392b; animation: pulse 1.6s ease-in-out infinite"></span>
+        Lobby · not started
+      </div>
+
+      <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px">
+        <div style="position: relative; width: 408px; background: var(--color-neutral-100); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 13px 14px; animation: popIn 260ms cubic-bezier(0.22,1,0.3,1) both">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px">
+            <div style="flex: 1; font-size: 10px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-accent-700)">Battle setup</div>
+            <button class="btn btn-secondary" style="border-radius: 999px; font-size: 11px; padding: 4px 11px" onClick="{{ reset }}">Reset</button>
+          </div>
+
+          <div style="display: flex; gap: 14px; align-items: flex-start">
+            <div style="width: 104px; flex-shrink: 0">
+              <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 7px">Teams</div>
+              <div style="display: flex; flex-direction: column; gap: 3px; background: var(--color-neutral-200); border-radius: 12px; padding: 3px">
+                <sc-for list="{{ teamOpts }}" as="t" hint-placeholder-count="4">
+                  <button style="{{ t.style }}" onClick="{{ t.pick }}">{{ t.label }}</button>
+                </sc-for>
+              </div>
+              <div style="font-size: 9px; line-height: 1.4; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-top: 8px">{{ rosterNote }}</div>
+            </div>
+
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+              <div>
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px">
+                  <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Combat length</div>
+                  <div style="font-size: 11px; font-weight: 700">{{ lengthLabel }}</div>
+                </div>
+                <div style="height: 14px; display: flex; align-items: center; cursor: pointer; touch-action: none" onPointerDown="{{ lengthDown }}">
+                  <div style="position: relative; width: 100%; height: 5px; border-radius: 999px; background: var(--color-neutral-300)">
+                    <div style="{{ lengthFill }}"></div>
+                    <div style="{{ lengthKnob }}"></div>
+                  </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 9px; color: color-mix(in srgb, var(--color-text) 45%, transparent); margin-top: 3px">
+                  <span>15 min sprint</span><span>4 h marathon</span>
+                </div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 5px">
+                <div>
+                  <button style="{{ modelsCombo }}" onClick="{{ toggleModels }}">
+                    <span style="flex: 1; min-width: 0; text-align: left">
+                      <span style="display: block; font-size: 11px; font-weight: 700">Models in play</span>
+                      <span style="{{ modelsSubStyle }}">{{ modelsSummary }}</span>
+                    </span>
+                    <span style="font-size: 11px; opacity: 0.5">›</span>
+                  </button>
+
+                  <sc-if value="{{ modelsOpen }}" hint-placeholder-val="{{ false }}">
+                    <div style="position: absolute; left: calc(100% + 10px); top: 0; width: 210px; background: var(--color-neutral-100); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 10px; z-index: 3; animation: popInSide 200ms cubic-bezier(0.22,1,0.3,1) both">
+                      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px">
+                        <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700)">Model pool</div>
+                        <div style="display: flex; gap: 3px">
+                          <button style="{{ tinyBtn }}" onClick="{{ allModels }}">All</button>
+                          <button style="{{ tinyBtn }}" onClick="{{ noModels }}">None</button>
+                        </div>
+                      </div>
+                      <div style="display: flex; flex-direction: column; gap: 1px; max-height: 130px; overflow-y: auto; margin: 0 -3px; padding: 0 3px">
+                        <sc-for list="{{ modelList }}" as="m" hint-placeholder-count="10">
+                          <button style="{{ m.style }}" onClick="{{ m.toggle }}">
+                            <span style="{{ m.box }}">{{ m.check }}</span>
+                            <span style="flex: 1; text-align: left; min-width: 0">
+                              <span style="display: block; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ m.name }}</span>
+                              <span style="display: block; font-size: 9px; color: color-mix(in srgb, var(--color-text) 50%, transparent)">{{ m.maker }}</span>
+                            </span>
+                          </button>
+                        </sc-for>
+                      </div>
+                      <div style="height: 1px; background: var(--color-divider); margin: 9px 0"></div>
+                      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px">
+                        <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Thinking effort</div>
+                        <div style="font-size: 9px; color: color-mix(in srgb, var(--color-text) 50%, transparent)">{{ effortNote }}</div>
+                      </div>
+                      <div style="display: flex; gap: 3px; background: var(--color-neutral-200); border-radius: 999px; padding: 3px">
+                        <sc-for list="{{ effortOpts }}" as="e" hint-placeholder-count="4">
+                          <button style="{{ e.style }}" onClick="{{ e.pick }}">{{ e.label }}</button>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+                </div>
+
+                <div>
+                  <button style="{{ archCombo }}" onClick="{{ toggleArch }}">
+                    <span style="flex: 1; min-width: 0; text-align: left">
+                      <span style="display: block; font-size: 11px; font-weight: 700">Archetypes in play</span>
+                      <span style="{{ archSubStyle }}">{{ archSummary }}</span>
+                    </span>
+                    <span style="font-size: 11px; opacity: 0.5">›</span>
+                  </button>
+
+                  <sc-if value="{{ archOpen }}" hint-placeholder-val="{{ false }}">
+                    <div style="position: absolute; left: calc(100% + 10px); top: 0; width: 210px; background: var(--color-neutral-100); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 10px; z-index: 3; animation: popInSide 200ms cubic-bezier(0.22,1,0.3,1) both">
+                      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px">
+                        <div style="font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700)">Archetype pool</div>
+                        <div style="display: flex; gap: 3px">
+                          <button style="{{ tinyBtn }}" onClick="{{ allArch }}">All</button>
+                          <button style="{{ tinyBtn }}" onClick="{{ noArch }}">None</button>
+                        </div>
+                      </div>
+                      <div style="display: flex; flex-direction: column; gap: 1px; max-height: 168px; overflow-y: auto; margin: 0 -3px; padding: 0 3px">
+                        <sc-for list="{{ archList }}" as="k" hint-placeholder-count="8">
+                          <button style="{{ k.style }}" onClick="{{ k.toggle }}">
+                            <span style="{{ k.box }}">{{ k.check }}</span>
+                            <span style="font-size: 12px; width: 15px; flex-shrink: 0">{{ k.glyph }}</span>
+                            <span style="flex: 1; min-width: 0">
+                              <span style="display: block; font-weight: 600; font-size: 11px">{{ k.name }}</span>
+                              <span style="display: block; font-size: 9px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">{{ k.line }}</span>
+                            </span>
+                          </button>
+                        </sc-for>
+                      </div>
+                      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--color-neutral-200); border-radius: 10px; padding: 6px 9px; margin-top: 9px">
+                        <span style="font-size: 11px; font-weight: 600">No repeats in a team</span>
+                        <button style="{{ uniqueTrack }}" onClick="{{ toggleUnique }}" aria-label="No repeats in a team"><span style="{{ uniqueKnob }}"></span></button>
+                      </div>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <div style="width: 408px; background: var(--color-neutral-100); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 12px 12px 10px">
+          <textarea class="input" rows="2" placeholder="Give them something to fight over" style="width: 100%; box-sizing: border-box; border: none; background: var(--color-neutral-200); border-radius: 12px; font-family: var(--font-body); font-size: 13px; line-height: 1.5; resize: none; padding: 9px 12px">A pricing page for a seed-box subscription — warm, rounded, one accent, and the middle tier has to read first.</textarea>
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px">
+            <button class="btn btn-secondary" style="border-radius: 999px; font-size: 12px; padding: 6px 14px" onClick="{{ surprise }}">Surprise me</button>
+            <button class="btn btn-secondary" style="border-radius: 999px; font-size: 12px; padding: 6px 14px">+ Reference</button>
+            <span style="flex: 1"></span>
+            <button class="btn btn-primary" style="border-radius: 999px; padding: 8px 20px; font-size: 13px; white-space: nowrap">Start the battle</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <sc-if value="{{ showGallery }}" hint-placeholder-val="{{ true }}">
+    <section>
+      <h3 style="margin: 0 0 5px; font-size: 19px">Control set</h3>
+      <p style="margin: 0 0 14px; font-size: 12px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">Four primitives cover the panel: a 34×19 switch, a 5px track slider with a 13px knob, a pill segment for four choices or fewer, and the combo row that opens a menu sideways.</p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; max-width: 1100px">
+
+        <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-sm)">
+          <div style="font-family: var(--font-heading); font-size: 15px; margin-bottom: 12px">Switch</div>
+          <div style="display: flex; flex-direction: column; gap: 11px">
+            <sc-for list="{{ demoSwitches }}" as="s" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+                <span style="{{ s.labelStyle }}">{{ s.label }}</span>
+                <button style="{{ s.track }}" onClick="{{ s.toggle }}" aria-label="{{ s.label }}"><span style="{{ s.knob }}"></span></button>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin: 13px 0 0; font-size: 11px; line-height: 1.55; color: color-mix(in srgb, var(--color-text) 55%, transparent)">Terracotta on, neutral-400 off, inset shadow so the track reads pressed into the cream.</p>
+        </div>
+
+        <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-sm)">
+          <div style="font-family: var(--font-heading); font-size: 15px; margin-bottom: 12px">Slider</div>
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <sc-for list="{{ demoSliders }}" as="tr" hint-placeholder-count="2">
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px">
+                  <span style="font-weight: 600">{{ tr.label }}</span>
+                  <span style="color: color-mix(in srgb, var(--color-text) 50%, transparent)">{{ tr.readout }}</span>
+                </div>
+                <div style="height: 14px; display: flex; align-items: center; cursor: pointer; touch-action: none" onPointerDown="{{ tr.down }}">
+                  <div style="position: relative; width: 100%; height: 5px; border-radius: 999px; background: var(--color-neutral-300)">
+                    <div style="{{ tr.fill }}"></div>
+                    <div style="{{ tr.knob }}"></div>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin: 13px 0 0; font-size: 11px; line-height: 1.55; color: color-mix(in srgb, var(--color-text) 55%, transparent)">Drag anywhere on the 14px band, not just the knob.</p>
+        </div>
+
+        <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-sm)">
+          <div style="font-family: var(--font-heading); font-size: 15px; margin-bottom: 12px">Segment</div>
+          <div style="display: flex; gap: 3px; background: var(--color-neutral-200); border-radius: 999px; padding: 3px; margin-bottom: 10px">
+            <sc-for list="{{ effortOpts }}" as="e" hint-placeholder-count="4">
+              <button style="{{ e.style }}" onClick="{{ e.pick }}">{{ e.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; background: var(--color-neutral-200); border-radius: 12px; padding: 3px; width: 104px">
+            <sc-for list="{{ teamOpts }}" as="t" hint-placeholder-count="4">
+              <button style="{{ t.style }}" onClick="{{ t.pick }}">{{ t.label }}</button>
+            </sc-for>
+          </div>
+          <p style="margin: 13px 0 0; font-size: 11px; line-height: 1.55; color: color-mix(in srgb, var(--color-text) 55%, transparent)">Horizontal for effort, stacked for team count — same pill, same selected treatment.</p>
+        </div>
+
+        <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-sm)">
+          <div style="font-family: var(--font-heading); font-size: 15px; margin-bottom: 8px">Combo row</div>
+          <div style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px">
+            <div style="{{ comboDemoIdle }}">
+              <span style="flex: 1; text-align: left"><span style="display: block; font-size: 11px; font-weight: 700">Closed</span><span style="display: block; font-size: 9px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">summary of what's inside</span></span>
+              <span style="font-size: 11px; opacity: 0.5">›</span>
+            </div>
+            <div style="{{ comboDemoOpen }}">
+              <span style="flex: 1; text-align: left"><span style="display: block; font-size: 11px; font-weight: 700">Open</span><span style="display: block; font-size: 9px; opacity: 0.75">menu is showing to the right</span></span>
+              <span style="font-size: 11px; opacity: 0.6">›</span>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 11px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 65%, transparent)">Two lines: the label and a live summary, so the panel answers the question without opening. Menus open 8px to the right, 14px radius, aligned to the row's top — or its bottom for rows low in the panel.</p>
+        </div>
+      </div>
+    </section>
+  </sc-if>
+
+  <section>
+    <h3 style="margin: 0 0 5px; font-size: 19px">Archetypes</h3>
+    <p style="margin: 0 0 14px; font-size: 12px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">Ten hackathon personalities. One is dealt to each avatar at the start — a bias, not a skill level.</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; max-width: 1100px">
+      <sc-for list="{{ personaCards }}" as="k" hint-placeholder-count="10">
+        <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 14px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; align-items: center; gap: 7px">
+            <span style="font-size: 16px">{{ k.glyph }}</span>
+            <span style="font-family: var(--font-heading); font-size: 14px">{{ k.name }}</span>
+          </div>
+          <p style="margin: 0; font-size: 11px; line-height: 1.55; color: color-mix(in srgb, var(--color-text) 65%, transparent)">{{ k.blurb }}</p>
+          <div style="display: flex; gap: 4px; flex-wrap: wrap">
+            <sc-for list="{{ k.tags }}" as="t" hint-placeholder-count="2">
+              <span class="tag tag-outline" style="font-size: 9px; padding: 2px 8px">{{ t }}</span>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;defaultTeams&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:2,&quot;min&quot;:1,&quot;max&quot;:4,&quot;tsType&quot;:&quot;number&quot;},&quot;showGallery&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;roomArt&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const MODELS = [
+  { id: 'sonnet45', name: 'Claude Sonnet 4.5', maker: 'Anthropic' },
+  { id: 'opus41', name: 'Claude Opus 4.1', maker: 'Anthropic' },
+  { id: 'gpt52', name: 'GPT-5.2', maker: 'OpenAI' },
+  { id: 'o4pro', name: 'o4-pro', maker: 'OpenAI' },
+  { id: 'gem3pro', name: 'Gemini 3 Pro', maker: 'Google' },
+  { id: 'gem3flash', name: 'Gemini 3 Flash', maker: 'Google' },
+  { id: 'grok4', name: 'Grok 4', maker: 'xAI' },
+  { id: 'kimik2', name: 'Kimi K2 Thinking', maker: 'Moonshot' },
+  { id: 'dsr1', name: 'DeepSeek R1', maker: 'DeepSeek' },
+  { id: 'mistral3', name: 'Mistral Large 3', maker: 'Mistral' },
+  { id: 'qwen3', name: 'Qwen3 Max', maker: 'Alibaba' },
+  { id: 'llama5', name: 'Llama 5 405B', maker: 'Meta' }
+];
+
+const PERSONAS = [
+  { id: 'vibe', glyph: '🌀', name: 'The Vibe Coder', line: 'Ships at 3am, reads nothing', blurb: 'Trusts the feeling over the spec. Four screens done before anyone opens the brief, one of them beautiful.', tags: ['Fast', 'Chaotic'] },
+  { id: 'deck', glyph: '📣', name: 'The Deck Wizard', line: 'Sells it before it exists', blurb: 'Every screen is a slide. Narrative first, product later — and the demo somehow lands.', tags: ['Loud', 'Persuasive'] },
+  { id: 'architect', glyph: '🏛', name: 'The Architect', line: 'Six abstractions, one screen', blurb: 'Refuses to hardcode anything. The system is elegant; the deadline is a rumour.', tags: ['Rigorous', 'Slow'] },
+  { id: 'pivot', glyph: '🔀', name: 'The Pivot King', line: 'Third idea since kickoff', blurb: 'Smells a better market every hour. Great instincts, terrible commitment.', tags: ['Restless', 'Sharp'] },
+  { id: 'faang', glyph: '📐', name: 'The Ex-FAANG Purist', line: 'Wrote a design doc first', blurb: 'Process is the product. Nothing merges unreviewed, nothing surprises the judges.', tags: ['Careful', 'Consistent'] },
+  { id: 'growth', glyph: '📈', name: 'The Growth Goblin', line: 'Adds a referral loop', blurb: 'Sees a funnel in the empty state. Will A/B test the hackathon itself.', tags: ['Opportunistic'] },
+  { id: 'diva', glyph: '💎', name: 'The Pixel Diva', line: 'Kerned the 404 page', blurb: 'One screen, perfect. Would rather submit less than submit ugly.', tags: ['Precise', 'Narrow'] },
+  { id: 'doomer', glyph: '🛡', name: 'The Safety Doomer', line: 'Threat model before UI', blurb: 'Asks what happens when it is abused. Slows everyone down, saves the demo once.', tags: ['Cautious', 'Contrarian'] },
+  { id: 'grinder', glyph: '☕️', name: 'The Solo Grinder', line: 'Sleep is a later problem', blurb: 'Head down, no comms, enormous output. Nobody knows what they built until submission.', tags: ['Relentless', 'Quiet'] },
+  { id: 'closer', glyph: '🤝', name: 'The Enterprise Closer', line: 'Already promised it to a client', blurb: 'Talks in logos and rollout plans. Bends the brief toward whoever might pay for it.', tags: ['Polished', 'Pushy'] }
+];
+
+const EFFORTS = [
+  { id: 'instant', label: 'Instant', note: 'no thinking' },
+  { id: 'balanced', label: 'Balanced', note: 'short thinking' },
+  { id: 'deep', label: 'Deep', note: 'extended' },
+  { id: 'obsessive', label: 'Max', note: 'full budget' }
+];
+
+const LENGTHS = [15, 30, 45, 60, 90, 120, 180, 240];
+const SEED_MODELS = ['sonnet45', 'opus41', 'gpt52', 'gem3pro', 'grok4', 'kimik2'];
+const SEED_ARCH = ['vibe', 'deck', 'architect', 'pivot', 'diva', 'grinder'];
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      rootOpen: true,
+      teams: 2,
+      menu: null,
+      lengthIdx: 2,
+      models: SEED_MODELS.slice(),
+      arch: SEED_ARCH.slice(),
+      effort: 'balanced',
+      unique: true,
+      flags: { spectate: true, judge: false },
+      demo: { a: true, b: false, c: true },
+      demoVals: { rounds: 55, spice: 30 }
+    };
+  }
+
+  componentDidMount() {
+    if (typeof this.props.defaultTeams === 'number') this.setState({ teams: Math.max(1, Math.min(4, this.props.defaultTeams)) });
+  }
+
+  seg = (active) => 'flex: 1; cursor: pointer; font-family: var(--font-body); font-size: 10px; font-weight: 700; line-height: 1.15; text-align: center; padding: 5px 4px; border-radius: 999px; transition: all 160ms cubic-bezier(0.22,1,0.3,1); '
+    + (active ? 'background-image: linear-gradient(180deg, var(--color-neutral-100), color-mix(in srgb, var(--color-neutral-200) 60%, var(--color-neutral-100))); color: var(--color-text); border: 1px solid color-mix(in srgb, #000 10%, transparent); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 14%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent)'
+      : 'background: transparent; border: 1px solid transparent; color: color-mix(in srgb, var(--color-text) 55%, transparent)');
+
+  track = (on, disabled) => 'position: relative; width: 34px; height: 19px; border-radius: 999px; border: none; padding: 0; flex-shrink: 0; cursor: ' + (disabled ? 'not-allowed' : 'pointer')
+    + '; background: ' + (on ? 'var(--color-accent-500)' : 'var(--color-neutral-400)')
+    + '; box-shadow: inset 0 1px 3px color-mix(in srgb, #2e2b25 22%, transparent); transition: background 200ms cubic-bezier(0.22,1,0.3,1); opacity: ' + (disabled ? '0.45' : '1');
+
+  knob = (on) => 'position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 999px; background: var(--color-neutral-100); box-shadow: var(--shadow-sm); transition: transform 220ms cubic-bezier(0.22,1,0.3,1); transform: translateX(' + (on ? '15px' : '0') + ')';
+
+  fill = (v) => 'position: absolute; left: 0; top: 0; height: 100%; width: ' + v + '%; border-radius: 999px; background: var(--color-accent-500)';
+  sliderKnob = (v) => 'position: absolute; top: 50%; left: ' + v + '%; width: 13px; height: 13px; margin-left: -6.5px; border-radius: 999px; background: var(--color-neutral-100); box-shadow: var(--shadow-md); transform: translateY(-50%); outline: 2px solid var(--color-accent-500); outline-offset: -2px';
+
+  combo = (open) => 'display: flex; align-items: center; gap: 8px; width: 100%; cursor: pointer; font-family: var(--font-body); padding: 7px 9px; border-radius: 11px; border: 1px solid color-mix(in srgb, #000 10%, transparent); transition: all 160ms cubic-bezier(0.22,1,0.3,1); '
+    + (open ? 'background-image: linear-gradient(180deg, color-mix(in srgb, #fff 12%, var(--color-accent-500)), var(--color-accent-600)); color: var(--color-neutral-100); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 20%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 22%, transparent)'
+      : 'background-image: linear-gradient(180deg, var(--color-neutral-100), var(--color-neutral-200)); color: var(--color-text); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 12%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent)');
+
+  comboSub = (open) => 'display: block; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; ' + (open ? 'opacity: 0.8' : 'color: color-mix(in srgb, var(--color-text) 55%, transparent)');
+
+  checkRow = (on) => 'display: flex; align-items: center; gap: 7px; width: 100%; border: none; cursor: pointer; text-align: left; font-family: var(--font-body); color: var(--color-text); padding: 5px 6px; border-radius: 9px; transition: background 140ms; background: ' + (on ? 'var(--color-accent-100)' : 'transparent');
+
+  box = (on) => 'width: 15px; height: 15px; border-radius: 5px; flex-shrink: 0; display: grid; place-items: center; font-size: 8px; font-weight: 700; transition: all 140ms; '
+    + (on ? 'background: var(--color-accent-500); color: var(--color-neutral-100)' : 'background: var(--color-neutral-100); box-shadow: inset 0 0 0 1.5px var(--color-neutral-400); color: transparent');
+
+  tiny = 'cursor: pointer; font-family: var(--font-body); font-size: 9px; font-weight: 700; line-height: 1.15; padding: 4px 9px; border-radius: 999px; color: color-mix(in srgb, var(--color-text) 68%, transparent); border: 1px solid color-mix(in srgb, #000 10%, transparent); background-image: linear-gradient(180deg, var(--color-neutral-100), var(--color-neutral-200)); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 12%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent)';
+
+  toggleIn = (key, id) => this.setState(s => ({ [key]: s[key].includes(id) ? s[key].filter(x => x !== id) : s[key].concat([id]) }));
+
+  drag = (el, apply) => {
+    const move = (ev) => {
+      const r = el.getBoundingClientRect();
+      apply(Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)));
+    };
+    const up = () => window.removeEventListener('pointermove', move);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up, { once: true });
+    return move;
+  };
+
+  lengthDown = (e) => {
+    const el = e.currentTarget;
+    this.drag(el, (f) => this.setState({ lengthIdx: Math.round(f * (LENGTHS.length - 1)) }))(e);
+  };
+
+  demoDown = (key) => (e) => {
+    const el = e.currentTarget;
+    this.drag(el, (f) => this.setState(s => ({ demoVals: Object.assign({}, s.demoVals, { [key]: Math.round(f * 100) }) })))(e);
+  };
+
+  fmtLength = (m) => m < 60 ? m + ' min' : (m / 60) + (m === 60 ? ' hour' : ' hours');
+
+  renderVals() {
+    const st = this.state;
+    const effort = EFFORTS.find(e => e.id === st.effort);
+    const mins = LENGTHS[st.lengthIdx];
+    const lengthPct = (st.lengthIdx / (LENGTHS.length - 1)) * 100;
+    const seats = st.teams * 3;
+    const modelsOpen = st.menu === 'models';
+    const archOpen = st.menu === 'arch';
+
+    const flagDefs = [
+      { key: 'spectate', label: 'Crowd reactions on the canvas' },
+      { key: 'judge', label: 'Judge model narrates each round' }
+    ];
+
+    return {
+      roomArt: this.props.roomArt ?? true,
+      showGallery: this.props.showGallery ?? true,
+      rootOpen: st.rootOpen,
+      surprise: () => {
+        const pick = (arr, n) => arr.slice().sort(() => Math.random() - 0.5).slice(0, n).map(x => x.id);
+        this.setState({ models: pick(MODELS, 4 + Math.floor(Math.random() * 5)), arch: pick(PERSONAS, 4 + Math.floor(Math.random() * 5)) });
+      },
+      triggerDot: 'width: 6px; height: 6px; border-radius: 999px; background: ' + (st.rootOpen ? 'var(--color-neutral-100)' : 'var(--color-accent-500)'),
+      triggerStyle: 'display: flex; align-items: center; gap: 7px; border: none; cursor: pointer; font-family: var(--font-body); font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 999px; white-space: nowrap; transition: all 160ms cubic-bezier(0.22,1,0.3,1); '
+        + (st.rootOpen ? 'background: var(--color-accent-500); color: var(--color-neutral-100)' : 'background: var(--color-neutral-200); color: var(--color-text)'),
+      toggleRoot: () => this.setState({ rootOpen: !st.rootOpen, menu: null }),
+      closeAll: () => this.setState({ rootOpen: false, menu: null }),
+      reset: () => this.setState({ teams: 2, lengthIdx: 2, models: SEED_MODELS.slice(), arch: SEED_ARCH.slice(), effort: 'balanced', unique: true, menu: null }),
+
+      teamOpts: [1, 2, 3, 4].map(n => ({
+        label: n + (n === 1 ? ' team' : ' teams'),
+        style: this.seg(n === st.teams),
+        pick: () => this.setState({ teams: n })
+      })),
+      rosterNote: seats + ' seats · 3 models per team, drawn at random',
+
+      lengthLabel: this.fmtLength(mins),
+      lengthFill: this.fill(lengthPct),
+      lengthKnob: this.sliderKnob(lengthPct),
+      lengthDown: this.lengthDown,
+
+      modelsOpen, archOpen,
+      modelsCombo: this.combo(modelsOpen),
+      archCombo: this.combo(archOpen),
+      modelsSubStyle: this.comboSub(modelsOpen),
+      archSubStyle: this.comboSub(archOpen),
+      modelsSummary: st.models.length === 0 ? 'nothing selected yet' : st.models.length + ' of ' + MODELS.length + ' · ' + effort.label + ' effort',
+      archSummary: st.arch.length === 0 ? 'nothing selected yet' : st.arch.length + ' of ' + PERSONAS.length + ' in the deal',
+      toggleModels: () => this.setState({ menu: modelsOpen ? null : 'models' }),
+      toggleArch: () => this.setState({ menu: archOpen ? null : 'arch' }),
+
+      tinyBtn: this.tiny,
+      allModels: () => this.setState({ models: MODELS.map(m => m.id) }),
+      noModels: () => this.setState({ models: [] }),
+      allArch: () => this.setState({ arch: PERSONAS.map(p => p.id) }),
+      noArch: () => this.setState({ arch: [] }),
+
+      modelList: MODELS.map(m => {
+        const on = st.models.includes(m.id);
+        return { name: m.name, maker: m.maker, check: on ? '✓' : '', style: this.checkRow(on), box: this.box(on), toggle: () => this.toggleIn('models', m.id) };
+      }),
+      archList: PERSONAS.map(p => {
+        const on = st.arch.includes(p.id);
+        return { glyph: p.glyph, name: p.name, line: p.line, check: on ? '✓' : '', style: this.checkRow(on), box: this.box(on), toggle: () => this.toggleIn('arch', p.id) };
+      }),
+
+      effortOpts: EFFORTS.map(e => ({ label: e.label, style: this.seg(e.id === st.effort), pick: () => this.setState({ effort: e.id }) })),
+      effortNote: effort.note,
+
+      uniqueTrack: this.track(st.unique, false),
+      uniqueKnob: this.knob(st.unique),
+      toggleUnique: () => this.setState({ unique: !st.unique }),
+
+      switches: flagDefs.map(f => ({
+        label: f.label,
+        track: this.track(st.flags[f.key], false),
+        knob: this.knob(st.flags[f.key]),
+        toggle: () => this.setState(s => ({ flags: Object.assign({}, s.flags, { [f.key]: !s.flags[f.key] }) }))
+      })),
+
+      comboDemoIdle: this.combo(false),
+      comboDemoOpen: this.combo(true),
+
+      demoSwitches: [
+        { key: 'a', label: 'On', dis: false },
+        { key: 'b', label: 'Off', dis: false },
+        { key: 'c', label: 'Disabled', dis: true }
+      ].map(d => ({
+        label: d.label,
+        labelStyle: 'font-size: 12px; ' + (d.dis ? 'color: color-mix(in srgb, var(--color-text) 40%, transparent)' : ''),
+        track: this.track(st.demo[d.key], d.dis),
+        knob: this.knob(st.demo[d.key]),
+        toggle: d.dis ? () => {} : () => this.setState(s => ({ demo: Object.assign({}, s.demo, { [d.key]: !s.demo[d.key] }) }))
+      })),
+      demoSliders: [
+        { key: 'rounds', label: 'Round length', fmt: (v) => Math.round(60 + v * 2.4) + 's' },
+        { key: 'spice', label: 'Brief spiciness', fmt: (v) => v + '%' }
+      ].map(d => ({
+        label: d.label,
+        readout: d.fmt(st.demoVals[d.key]),
+        fill: this.fill(st.demoVals[d.key]),
+        knob: this.sliderKnob(st.demoVals[d.key]),
+        down: this.demoDown(d.key)
+      })),
+      personaCards: PERSONAS.map(p => ({ glyph: p.glyph, name: p.name, blurb: p.blurb, tags: p.tags }))
+    };
+  }
+}
+
+</script>
+</body>
+</html>

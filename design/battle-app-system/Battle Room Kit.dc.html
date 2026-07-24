@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/organic-566dce98-d69a-46be-b131-3ffdea8bf1bc/styles.css">
+<script src="_ds/organic-566dce98-d69a-46be-b131-3ffdea8bf1bc/_ds_bundle.js"></script>
+<script src="./image-slot.js"></script>
+<script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --font-heading: "Newsreader", Georgia, serif; --font-heading-weight: 500; }
+  body { margin: 0; background: var(--color-bg); }
+  h1, h2, h3, h4, h5, h6 { letter-spacing: -0.01em; }
+  @keyframes sheetIn { from { transform: translateX(24px); opacity: 0; filter: blur(6px); } to { transform: none; opacity: 1; filter: blur(0); } }
+  @keyframes scrimIn { from { opacity: 0; backdrop-filter: blur(0px); } to { opacity: 1; backdrop-filter: blur(3px); } }
+  @keyframes modalIn { from { transform: translateY(10px) scale(0.985); opacity: 0; filter: blur(6px); } to { transform: none; opacity: 1; filter: blur(0); } }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+  @keyframes fire { 0% { transform: translateY(0) scale(0.7); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-120px) scale(1.25); opacity: 0; } }
+  @keyframes pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; text-align: center; line-height: 1.15; font-family: var(--font-body); font-weight: 700; border: 1px solid color-mix(in srgb, #000 10%, transparent); }
+  .btn svg { width: 15px; height: 15px; stroke-width: 2.75; }
+  .btn-icon { line-height: 1; font-size: 15px; padding: 0; width: 38px; height: 38px; }
+  .btn-icon > span, .btn-icon > i { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-style: normal; }
+  .btn-icon svg { width: 18px; height: 18px; stroke-width: 2.75; display: block; }
+  .btn-primary { background-image: linear-gradient(180deg, color-mix(in srgb, #fff 12%, var(--color-accent-500)), var(--color-accent-600)); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 20%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 24%, transparent); }
+  .btn-primary:hover { background-image: linear-gradient(180deg, var(--color-accent-500), var(--color-accent-700)); }
+  .btn-primary:active { background-image: linear-gradient(180deg, var(--color-accent-600), var(--color-accent-600)); box-shadow: inset 0 1px 3px color-mix(in srgb, #000 22%, transparent); }
+  .btn-secondary { background-image: linear-gradient(180deg, var(--color-neutral-100), var(--color-neutral-200)); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 12%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent); }
+  .btn-secondary:active { box-shadow: inset 0 1px 3px color-mix(in srgb, #2e2b25 16%, transparent); }
+  @keyframes pillIn { from { transform: translateY(5px) scale(0.86); opacity: 0; filter: blur(3px); } to { transform: none; opacity: 1; filter: blur(0); } }
+  @keyframes shimmer { from { background-position: 130% 0; } to { background-position: -130% 0; } }
+</style>
+</helmet>
+
+<div style="padding: 40px 44px 72px; display: flex; flex-direction: column; gap: 44px; font-family: var(--font-body); color: var(--color-text); max-width: 1500px; margin: 0 auto">
+
+  <header style="display: flex; align-items: flex-end; justify-content: space-between; gap: 32px">
+    <div style="max-width: 620px">
+      <div style="font-family: var(--font-body); font-weight: 700; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: 10px">Design Battle · Core UI</div>
+      <h1 style="font-size: 46px; margin: 0 0 10px">The room is the interface</h1>
+      <p style="font-size: 16px; margin: 0; color: color-mix(in srgb, var(--color-text) 60%, transparent); text-wrap: pretty">Agents live on the canvas. Everything else floats above it — a right-hand sheet for work in progress, a modal for the moment of truth, one composer to start the fight.</p>
+    </div>
+    <div style="display: flex; gap: 10px; flex-shrink: 0">
+      <button class="btn btn-secondary" style="border-radius: 999px" onClick="{{ fireEmoji }}">🔥 Fire emoji</button>
+      <button class="btn btn-secondary" style="border-radius: 999px" onClick="{{ openSheet }}">Open sheet</button>
+      <button class="btn btn-primary" style="border-radius: 999px" onClick="{{ openModal }}">Open modal</button>
+    </div>
+  </header>
+
+  <section>
+    <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px">
+      <h3 style="margin: 0">Canvas</h3>
+      <span style="font-size: 13px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">Room art is the background layer. UI never imitates it — clean, opaque, warm.</span>
+    </div>
+    <div style="position: relative; height: 620px; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-lg); background: #1b1917">
+      <img src="uploads/Aquarium Room Design.png" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover">
+
+      <div style="position: absolute; top: 20px; left: 20px; display: flex; gap: 10px; align-items: center">
+        <div style="display: flex; align-items: center; gap: 9px; background: var(--color-neutral-100); border-radius: 999px; padding: 8px 16px 8px 12px; box-shadow: var(--shadow-md); font-weight: 700; font-size: 13px">
+          <span style="width: 9px; height: 9px; border-radius: 999px; background: #c0392b; animation: pulse 1.6s ease-in-out infinite"></span>
+          Round 2 · Live
+        </div>
+        <div style="background: var(--color-neutral-100); border-radius: 999px; padding: 8px 16px; box-shadow: var(--shadow-md); font-family: var(--font-heading); font-size: 13px">01:48 left</div>
+      </div>
+
+      <div style="position: absolute; left: 26px; bottom: 26px; display: flex; gap: 14px; align-items: flex-end">
+        <div style="animation: bob 3.4s ease-in-out infinite">
+          <div style="position: relative; width: 48px; height: 48px">
+            <div style="position: absolute; inset: 0; border-radius: 10px; overflow: hidden; background: var(--color-neutral-300); box-shadow: var(--shadow-md); outline: 2px solid var(--color-neutral-100); outline-offset: -2px">
+              <img src="assets/avatars/punk-pastel.png" alt="" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated">
+            </div>
+            <div style="position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 6px; background: var(--color-neutral-100); box-shadow: var(--shadow-sm); overflow: hidden">
+              <image-slot id="room-badge-1" shape="rounded" radius="5" placeholder=" "></image-slot>
+            </div>
+          </div>
+          <div style="margin-top: 5px; display: flex; justify-content: center"><span style="background: var(--color-neutral-100); border-radius: 999px; padding: 1px 7px; font-size: 10px; font-weight: 700; box-shadow: var(--shadow-sm)">Mika</span></div>
+        </div>
+        <div style="animation: bob 3.9s ease-in-out infinite 0.5s">
+          <div style="position: relative; width: 48px; height: 48px">
+            <div style="position: absolute; inset: 0; border-radius: 10px; overflow: hidden; background: var(--color-neutral-300); box-shadow: var(--shadow-md); outline: 2px solid var(--color-neutral-100); outline-offset: -2px">
+              <img src="assets/avatars/goggles-beanie.png" alt="" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated">
+            </div>
+            <div style="position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 6px; background: var(--color-neutral-100); box-shadow: var(--shadow-sm); overflow: hidden">
+              <image-slot id="room-badge-2" shape="rounded" radius="5" placeholder=" "></image-slot>
+            </div>
+          </div>
+          <div style="margin-top: 5px; display: flex; justify-content: center"><span style="background: var(--color-neutral-100); border-radius: 999px; padding: 1px 7px; font-size: 10px; font-weight: 700; box-shadow: var(--shadow-sm)">Odin</span></div>
+        </div>
+        <div style="animation: bob 3.1s ease-in-out infinite 1.1s">
+          <div style="position: relative; width: 48px; height: 48px">
+            <div style="position: absolute; inset: 0; border-radius: 10px; overflow: hidden; background: var(--color-neutral-300); box-shadow: var(--shadow-md); outline: 2px solid var(--color-neutral-100); outline-offset: -2px">
+              <img src="assets/avatars/teal-beanie.png" alt="" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated">
+            </div>
+            <div style="position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 6px; background: var(--color-neutral-100); box-shadow: var(--shadow-sm); overflow: hidden">
+              <image-slot id="room-badge-3" shape="rounded" radius="5" placeholder=" "></image-slot>
+            </div>
+          </div>
+          <div style="margin-top: 5px; display: flex; justify-content: center"><span style="background: var(--color-neutral-100); border-radius: 999px; padding: 1px 7px; font-size: 10px; font-weight: 700; box-shadow: var(--shadow-sm)">Juno</span></div>
+        </div>
+      </div>
+
+      <sc-for list="{{ bursts }}" as="b" hint-placeholder-count="0">
+        <div style="{{ b.style }}">{{ b.glyph }}</div>
+      </sc-for>
+
+      <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+        <aside style="position: absolute; top: 12px; right: 12px; bottom: 12px; width: 392px; background: var(--color-neutral-100); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; overflow: hidden; animation: sheetIn 380ms cubic-bezier(0.22, 1, 0.3, 1) both">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 20px 14px">
+            <div>
+              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: 6px">Entry 2 of 3</div>
+              <h4 style="margin: 0">Mika's take</h4>
+            </div>
+            <button class="btn btn-icon btn-secondary" style="border-radius: 999px; flex-shrink: 0" onClick="{{ closeSheet }}" aria-label="Close sheet"><i data-lucide="x"></i></button>
+          </div>
+          <div style="padding: 0 20px 20px; overflow: auto; display: flex; flex-direction: column; gap: 14px">
+            <div style="position: relative; height: 200px; border-radius: var(--radius-md); overflow: hidden; background: var(--color-neutral-300)">
+              <image-slot id="sheet-shot" shape="rounded" radius="16" placeholder="Drop the entry screenshot"></image-slot>
+            </div>
+            <p style="margin: 0; font-size: 14px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 72%, transparent); text-wrap: pretty">Went warm and rounded: one accent, a lot of air, and the pricing table pulled apart so the middle tier reads first.</p>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap">
+              <span class="tag tag-accent">Warm</span>
+              <span class="tag tag-accent-2">On brief</span>
+              <span class="tag tag-outline">3 revisions</span>
+            </div>
+            <div style="height: 1px; background: var(--color-divider)"></div>
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Judge notes</div>
+              <div style="display: flex; gap: 10px; align-items: flex-start">
+                <div style="width: 30px; height: 30px; border-radius: 8px; background: var(--color-accent-300); flex-shrink: 0"></div>
+                <p style="margin: 0; font-size: 13px; line-height: 1.55">Type pairing is the strongest of the round. Loses a point on the hero crop.</p>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top: auto; padding: 14px 20px; border-top: 1px solid var(--color-divider); display: flex; gap: 10px; background: var(--color-neutral-100)">
+            <button class="btn btn-secondary" style="border-radius: 999px; flex: 1" onClick="{{ closeSheet }}">Skip</button>
+            <button class="btn btn-primary" style="border-radius: 999px; flex: 2" onClick="{{ openModal }}">Cast your vote</button>
+          </div>
+        </aside>
+      </sc-if>
+
+      <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position: absolute; inset: 0; display: grid; place-items: center; padding: 32px">
+          <div style="position: absolute; inset: 0; background: color-mix(in srgb, #1b1917 46%, transparent); backdrop-filter: blur(3px); animation: scrimIn 260ms ease both" onClick="{{ closeModal }}"></div>
+          <div style="position: relative; width: 520px; background: var(--color-neutral-100); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 28px; text-align: left; animation: modalIn 340ms cubic-bezier(0.22, 1, 0.3, 1) both">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: 8px">Round 2 · Results</div>
+            <h3 style="margin: 0 0 8px">Juno takes it by four points</h3>
+            <p style="margin: 0 0 20px; font-size: 14px; color: color-mix(in srgb, var(--color-text) 65%, transparent)">Closest round yet. One more to go before the belt is decided.</p>
+            <div style="display: flex; gap: 12px; margin-bottom: 22px">
+              <div style="flex: 1; background: var(--color-accent-2-200); border-radius: var(--radius-md); padding: 14px">
+                <div style="font-family: var(--font-heading); font-size: 30px; line-height: 1">62</div>
+                <div style="font-size: 12px; font-weight: 700; color: var(--color-accent-2-800)">Juno</div>
+              </div>
+              <div style="flex: 1; background: var(--color-neutral-200); border-radius: var(--radius-md); padding: 14px">
+                <div style="font-family: var(--font-heading); font-size: 30px; line-height: 1">58</div>
+                <div style="font-size: 12px; font-weight: 700; color: var(--color-neutral-700)">Mika</div>
+              </div>
+              <div style="flex: 1; background: var(--color-neutral-200); border-radius: var(--radius-md); padding: 14px">
+                <div style="font-family: var(--font-heading); font-size: 30px; line-height: 1">41</div>
+                <div style="font-size: 12px; font-weight: 700; color: var(--color-neutral-700)">Odin</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end">
+              <button class="btn btn-secondary" style="border-radius: 999px" onClick="{{ closeModal }}">Back to room</button>
+              <button class="btn btn-primary" style="border-radius: 999px" onClick="{{ closeModal }}">Start round 3</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </section>
+
+  <section>
+    <h3 style="margin: 0 0 6px">Composer</h3>
+    <p style="margin: 0 0 16px; font-size: 13px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">408px card that sits under the setup panel in the centred lobby stack: two lines of brief, small pill actions and the one loud action below it. Nothing starts without the setup above it — see <a href="Battle Setup Popovers.dc.html">the setup screen</a>.</p>
+    <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap">
+      <div style="width: 408px; background: var(--color-neutral-100); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 12px 12px 10px">
+        <textarea class="input" rows="2" placeholder="Give them something to fight over" style="width: 100%; box-sizing: border-box; border: none; background: var(--color-neutral-200); border-radius: 12px; font-family: var(--font-body); font-size: 13px; line-height: 1.5; resize: none; padding: 9px 12px">A pricing page for a seed-box subscription — warm, rounded, one accent, and the middle tier has to read first.</textarea>
+        <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px">
+          <button class="btn btn-secondary" style="border-radius: 999px; font-size: 12px; padding: 6px 14px">Surprise me</button>
+          <button class="btn btn-secondary" style="border-radius: 999px; font-size: 12px; padding: 6px 14px">+ Reference</button>
+          <span style="flex: 1"></span>
+          <button class="btn btn-primary" style="border-radius: 999px; padding: 8px 20px; font-size: 13px; white-space: nowrap">Start the battle</button>
+        </div>
+      </div>
+      <div style="max-width: 320px; font-size: 12px; line-height: 1.7; color: color-mix(in srgb, var(--color-text) 60%, transparent)">
+        <div style="font-family: var(--font-heading); font-size: 16px; color: var(--color-text); margin-bottom: 6px">Rules</div>
+        Brief field is neutral-200 on cream, 12px radius, two rows and no resize handle. Secondary actions use the documented Small secondary pill (12px, 6/14 padding); the primary keeps its terracotta pill. The card never spans the room — it stays 408px and centred under the setup panel.
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3 style="margin: 0 0 6px">Avatar</h3>
+    <p style="margin: 0 0 16px; font-size: 13px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">48×48 square, 10px radius, 2px cream ring. A 20×20 model icon sits at the top-right corner, offset 7px out. The pill below carries the name — or the live phase, see Status. Drop real art into any slot — see them running around in <a href="Battle Room Scene.dc.html">the full-screen scene</a>.</p>
+    <div style="display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; background: var(--color-neutral-100); border-radius: var(--radius-lg); padding: 26px 30px; box-shadow: var(--shadow-sm)">
+      <div>
+        <div style="position: relative; width: 48px; height: 48px;">
+          <div style="position: absolute; inset: 0; border-radius: 10px; overflow: hidden; background: var(--color-neutral-300); box-shadow: var(--shadow-md); outline: 2px solid var(--color-neutral-100); outline-offset: -2px">
+            <img src="assets/avatars/punk-pastel.png" alt="" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated">
+          </div>
+          <div style="position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 6px; background: var(--color-neutral-100); box-shadow: var(--shadow-sm); overflow: hidden">
+            <image-slot id="spec-badge-1" shape="rounded" radius="5" placeholder=" "></image-slot>
+          </div>
+        </div>
+        <div style="margin-top: 5px; display: flex; justify-content: center"><span style="background: var(--color-neutral-100); border-radius: 999px; padding: 1px 7px; font-size: 10px; font-weight: 700; box-shadow: var(--shadow-sm)">Mika</span></div>
+        <div style="font-size: 11px; margin-top: 10px; text-align: center; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Default</div>
+      </div>
+      <div>
+        <div style="position: relative; width: 48px; height: 48px; outline: 2px solid var(--color-accent-2-500); outline-offset: 4px; border-radius: 12px">
+          <div style="position: absolute; inset: 0; border-radius: 10px; overflow: hidden; background: var(--color-neutral-300); box-shadow: var(--shadow-md); outline: 2px solid var(--color-neutral-100); outline-offset: -2px">
+            <img src="assets/avatars/teal-beanie.png" alt="" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated">
+          </div>
+          <div style="position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 6px; background: var(--color-neutral-100); box-shadow: var(--shadow-sm); overflow: hidden">
+            <image-slot id="spec-badge-3" shape="rounded" radius="5" placeholder=" "></image-slot>
+          </div>
+          <div style="position: absolute; left: -6px; top: -8px; font-size: 15px">🏆</div>
+        </div>
+        <div style="margin-top: 5px; display: flex; justify-content: center"><span style="background: var(--color-neutral-100); border-radius: 999px; padding: 1px 7px; font-size: 10px; font-weight: 700; box-shadow: var(--shadow-sm)">Juno</span></div>
+        <div style="font-size: 11px; margin-top: 10px; text-align: center; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Winner</div>
+      </div>
+      <div>
+        <div style="position: relative; width: 48px; height: 48px; opacity: 0.45">
+          <div style="position: absolute; inset: 0; border-radius: 10px; overflow: hidden; background: var(--color-neutral-300); box-shadow: var(--shadow-md); outline: 2px solid var(--color-neutral-100); outline-offset: -2px">
+            <img src="assets/avatars/scarf-mohawk.png" alt="" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated">
+          </div>
+          <div style="position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 6px; background: var(--color-neutral-100); box-shadow: var(--shadow-sm); overflow: hidden">
+            <image-slot id="spec-badge-4" shape="rounded" radius="5" placeholder=" "></image-slot>
+          </div>
+        </div>
+        <div style="margin-top: 5px; display: flex; justify-content: center"><span style="background: var(--color-neutral-100); border-radius: 999px; padding: 1px 7px; font-size: 10px; font-weight: 700; box-shadow: var(--shadow-sm)">Vex</span></div>
+        <div style="font-size: 11px; margin-top: 10px; text-align: center; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Eliminated</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3 style="margin: 0 0 6px">Status</h3>
+    <p style="margin: 0 0 16px; font-size: 13px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">The name pill is also the status pill — same 10px pill, same slot under the avatar. When an agent starts a phase the name swaps out for the phase with a shimmer, then swaps back when it settles. Watch them cycle.</p>
+    <div style="display: flex; gap: 44px; flex-wrap: wrap; align-items: flex-start; background: var(--color-neutral-100); border-radius: var(--radius-lg); padding: 26px 30px; box-shadow: var(--shadow-sm)">
+      <div style="display: flex; gap: 26px">
+        <sc-for list="{{ roster }}" as="a" hint-placeholder-count="4">
+          <div style="width: 76px; display: flex; flex-direction: column; align-items: center">
+            <div style="position: relative; width: 48px; height: 48px">
+              <div style="position: absolute; inset: 0; border-radius: 10px; overflow: hidden; background: var(--color-neutral-300); box-shadow: var(--shadow-md); outline: 2px solid var(--color-neutral-100); outline-offset: -2px">
+                <img src="{{ a.src }}" alt="" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated">
+              </div>
+            </div>
+            <div style="margin-top: 5px; height: 18px; display: flex; align-items: center; justify-content: center">
+              <sc-if value="{{ a.isName }}" hint-placeholder-val="{{ true }}">
+                <span style="{{ a.namePill }}">{{ a.name }}</span>
+              </sc-if>
+              <sc-if value="{{ a.isStatus }}" hint-placeholder-val="{{ false }}">
+                <span style="{{ a.statusPill }}"><span style="{{ a.dot }}"></span>{{ a.status }}</span>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent)">The four phases</div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap">
+          <sc-for list="{{ statusChips }}" as="s" hint-placeholder-count="4">
+            <span style="{{ s.pill }}"><span style="{{ s.dot }}"></span>{{ s.label }}</span>
+          </sc-for>
+        </div>
+        <p style="margin: 0; max-width: 330px; font-size: 12px; line-height: 1.7; color: color-mix(in srgb, var(--color-text) 60%, transparent)">Pill swaps in over 320ms — rises 5px, un-blurs, scales up from 0.86. While a phase is live the pill runs a 1.6s accent-100 shimmer left to right; Shipped drops the shimmer and takes the sage dot. Idle is just the name, no dot.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3 style="margin: 0 0 6px">Tabs</h3>
+    <p style="margin: 0 0 16px; font-size: 13px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">The same object as the teams segment — neutral-200 trough, 3px padding, opaque cream pill for the selected one. Only the size changes: tabs run 12px with 7/14 padding and stretch to the panel width. Never more than four; never an underline.</p>
+    <div style="display: flex; gap: 34px; flex-wrap: wrap; align-items: flex-start; background: var(--color-neutral-100); border-radius: var(--radius-lg); padding: 26px 30px; box-shadow: var(--shadow-sm)">
+      <div style="display: flex; flex-direction: column; gap: 18px">
+        <div>
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 8px">With counts · 344px</div>
+          <div style="display: flex; gap: 3px; background: var(--color-neutral-200); border-radius: 999px; padding: 3px; width: 344px">
+            <sc-for list="{{ kitTabs }}" as="t" hint-placeholder-count="3">
+              <button style="{{ t.style }}" onClick="{{ t.pick }}">
+                <span>{{ t.label }}</span>
+                <sc-if value="{{ t.hasCount }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-weight: 600; opacity: 0.5">{{ t.count }}</span>
+                </sc-if>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 8px">Two-up · hugs its content</div>
+          <div style="display: inline-flex; gap: 3px; background: var(--color-neutral-200); border-radius: 999px; padding: 3px">
+            <sc-for list="{{ kitTabsSmall }}" as="t" hint-placeholder-count="2">
+              <button style="{{ t.style }}" onClick="{{ t.pick }}">{{ t.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <p style="margin: 0; max-width: 320px; font-size: 12px; line-height: 1.7; color: color-mix(in srgb, var(--color-text) 60%, transparent)">Selected: cream gradient pill, 1px ink-10 border, shadow-sm — the same treatment the primary and secondary buttons get, so the group still reads as one physical object. Unselected: transparent, text at 55%. Hover lifts the text to full ink; the pill slides in 160ms on the shared easing. Counts sit inside the tab at 55% weight, never as a coloured badge.</p>
+    </div>
+  </section>
+
+  <section>
+    <h3 style="margin: 0 0 6px">Avatar profile</h3>
+    <p style="margin: 0 0 16px; font-size: 13px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">The sheet, tabbed. Click an agent in the room and this is what floats in: who they are, and everything they've done this round. Same 392px shell and slide-in as the entry sheet — the tabs decide the content, nothing else moves.</p>
+    <div style="display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap">
+
+      <div style="width: 392px; background: var(--color-neutral-100); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden; display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 18px 18px 14px">
+          <div style="position: relative; width: 48px; height: 48px; flex-shrink: 0">
+            <div style="position: absolute; inset: 0; border-radius: 10px; overflow: hidden; background: var(--color-neutral-300); box-shadow: var(--shadow-md); outline: 2px solid var(--color-neutral-100); outline-offset: -2px">
+              <img src="assets/avatars/punk-pastel.png" alt="" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated">
+            </div>
+            <div style="position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 6px; background: var(--color-neutral-100); box-shadow: var(--shadow-sm); overflow: hidden">
+              <image-slot id="profile-badge" shape="rounded" radius="5" placeholder=" "></image-slot>
+            </div>
+          </div>
+          <div style="flex: 1; min-width: 0">
+            <h4 style="margin: 0 0 2px">Mika</h4>
+            <div style="display: flex; align-items: center; gap: 6px">
+              <span style="font-size: 9px; font-weight: 700; background: var(--color-accent-200); color: var(--color-accent-800); border-radius: 999px; padding: 2px 6px">S4.5</span>
+              <span style="font-size: 11px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">Warm minimalist · temp 0.8</span>
+            </div>
+          </div>
+          <button class="btn btn-icon btn-secondary" style="border-radius: 999px; flex-shrink: 0" aria-label="Close profile"><i data-lucide="x"></i></button>
+        </div>
+
+        <div style="padding: 0 18px 14px">
+          <div style="display: flex; gap: 3px; background: var(--color-neutral-200); border-radius: 999px; padding: 3px">
+            <sc-for list="{{ profileTabs }}" as="t" hint-placeholder-count="3">
+              <button style="{{ t.style }}" onClick="{{ t.pick }}">
+                <span>{{ t.label }}</span>
+                <sc-if value="{{ t.hasCount }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-weight: 600; opacity: 0.5">{{ t.count }}</span>
+                </sc-if>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+
+        <sc-if value="{{ isPersona }}" hint-placeholder-val="{{ true }}">
+          <div style="padding: 4px 18px 18px; display: flex; flex-direction: column; gap: 16px">
+            <p style="margin: 0; font-family: var(--font-heading); font-size: 19px; line-height: 1.3; text-wrap: pretty">Cuts a section before she'll shrink it.</p>
+            <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 70%, transparent); text-wrap: pretty">Types first and decorates last. Will spend the whole budget on one hero and leave the rest bare. Hates a fourth pricing tier.</p>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap">
+              <span class="tag tag-accent">Warm</span>
+              <span class="tag tag-accent-2">Restrained</span>
+              <span class="tag tag-outline">Type-led</span>
+              <span class="tag tag-outline">Slow starter</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 11px">
+              <sc-for list="{{ personaTraits }}" as="m" hint-placeholder-count="3">
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px">
+                    <span style="font-weight: 600">{{ m.label }}</span>
+                    <span style="color: color-mix(in srgb, var(--color-text) 50%, transparent)">{{ m.readout }}</span>
+                  </div>
+                  <div style="position: relative; width: 100%; height: 5px; border-radius: 999px; background: var(--color-neutral-300)">
+                    <div style="{{ m.fill }}"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display: flex; gap: 8px">
+              <button class="btn btn-secondary" style="border-radius: 999px; flex: 1; font-size: 13px">Remix persona</button>
+              <button class="btn btn-primary" style="border-radius: 999px; flex: 1; font-size: 13px">Challenge Mika</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isTraces }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 4px 18px 18px">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px">
+              <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Round 2 · 14 steps</span>
+              <button class="btn btn-secondary" style="border-radius: 999px; font-size: 11px; padding: 4px 11px">Tools only</button>
+            </div>
+            <div style="display: flex; flex-direction: column">
+              <sc-for list="{{ traces }}" as="t" hint-placeholder-count="5">
+                <div style="display: flex; gap: 11px">
+                  <div style="display: flex; flex-direction: column; align-items: center; width: 24px; flex-shrink: 0">
+                    <div style="{{ t.disc }}"><i data-lucide="{{ t.icon }}" width="13" height="13" stroke-width="2.75"></i></div>
+                    <div style="{{ t.rail }}"></div>
+                  </div>
+                  <div style="flex: 1; min-width: 0; padding-bottom: 16px">
+                    <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px">
+                      <span style="font-size: 12px; font-weight: 700">{{ t.title }}</span>
+                      <span style="font-size: 10px; color: color-mix(in srgb, var(--color-text) 45%, transparent)">{{ t.time }}</span>
+                    </div>
+                    <sc-if value="{{ t.isSay }}" hint-placeholder-val="{{ false }}">
+                      <p style="margin: 0; font-size: 13px; line-height: 1.55; color: color-mix(in srgb, var(--color-text) 70%, transparent); text-wrap: pretty">{{ t.text }}</p>
+                    </sc-if>
+                    <sc-if value="{{ t.isTool }}" hint-placeholder-val="{{ false }}">
+                      <div style="display: flex; align-items: center; gap: 8px; background: var(--color-neutral-200); border-radius: 10px; padding: 6px 10px">
+                        <span style="flex: 1; min-width: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: color-mix(in srgb, var(--color-text) 72%, transparent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ t.arg }}</span>
+                        <span style="flex-shrink: 0; font-size: 10px; font-weight: 700; border-radius: 999px; padding: 2px 7px; background: var(--color-accent-2-200); color: var(--color-accent-2-800)">{{ t.result }}</span>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ t.isShip }}" hint-placeholder-val="{{ false }}">
+                      <div style="display: flex; gap: 10px; align-items: center; background: var(--color-neutral-200); border-radius: 12px; padding: 8px">
+                        <div style="width: 84px; height: 56px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: var(--color-neutral-300)">
+                          <image-slot id="trace-ship" shape="rounded" radius="8" placeholder=" "></image-slot>
+                        </div>
+                        <div style="min-width: 0">
+                          <div style="font-size: 12px; font-weight: 700; margin-bottom: 2px">Entry 2 of 3</div>
+                          <div style="font-size: 11px; color: color-mix(in srgb, var(--color-text) 60%, transparent)">1440×900 · 3 revisions</div>
+                        </div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ t.isLive }}" hint-placeholder-val="{{ false }}">
+                      <span style="{{ t.livePill }}"><span style="{{ t.liveDot }}"></span>{{ t.text }}</span>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; max-width: 380px">
+        <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow-sm)">
+          <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 6px">Persona card</div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 65%, transparent)">One Caprasimo line the agent would say about itself, then plain body underneath — never both in the display face. Traits are tags, capped at four. No record, no win count — an agent arrives with a temperament, not a history. Trait meters reuse the slider track with no knob, so they read as disposition, not controls.</p>
+        </div>
+        <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow-sm)">
+          <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 6px">Traces</div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 65%, transparent)">Oldest first, live step last. A 24px rail: 22px cream disc with a Lucide glyph, 2px neutral-300 line between discs, dropped on the final step. Said out loud is plain 13px text; a tool call is a neutral-200 row — monospace argument, sage result chip on the right; a submission gets a thumbnail. The running step swaps the tool row for the shimmering status pill, so traces and the room agree.</p>
+        </div>
+        <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow-sm)">
+          <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 6px">Disc colours</div>
+          <div style="display: flex; flex-direction: column; gap: 9px; font-size: 12px; color: color-mix(in srgb, var(--color-text) 65%, transparent)">
+            <sc-for list="{{ traceLegend }}" as="l" hint-placeholder-count="4">
+              <div style="display: flex; align-items: center; gap: 10px">
+                <div style="{{ l.disc }}"><i data-lucide="{{ l.icon }}" width="13" height="13" stroke-width="2.75"></i></div>
+                <span>{{ l.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3 style="margin: 0 0 6px">Reveal card</h3>
+    <p style="margin: 0 0 16px; font-size: 13px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">What the room becomes when the timer hits zero. One submission at a time in a 404px panel at the top-left of the canvas — the entry sheet mirrored, no scrim, the room still running behind it. Live in <a href="Battle Submissions.dc.html">the submissions screen</a>.</p>
+    <div style="display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap">
+
+      <div style="width: 404px; background: var(--color-neutral-100); border-radius: 26px; box-shadow: var(--shadow-lg); padding: 14px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 0">
+          <div style="display: flex; align-items: center; gap: 9px">
+            <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-accent-700)">Submission 1 of 3</span>
+            <div style="display: flex; gap: 4px; align-items: center">
+              <sc-for list="{{ kitDots }}" as="d" hint-placeholder-count="3">
+                <span style="{{ d.style }}"></span>
+              </sc-for>
+            </div>
+          </div>
+          <button class="btn btn-icon btn-secondary" style="border-radius: 999px; width: 30px; height: 30px" aria-label="Close submissions"><i data-lucide="x"></i></button>
+        </div>
+
+        <div style="position: relative; height: 200px; border-radius: 18px; overflow: hidden; background: var(--color-neutral-200)">
+          <image-slot id="kit-reveal-shot" shape="rounded" radius="18" placeholder="Final screenshot"></image-slot>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; padding: 0 4px">
+          <div style="display: flex; align-items: center">
+            <div style="width: 30px; height: 30px; border-radius: 8px; overflow: hidden; background: var(--color-neutral-300); outline: 2px solid var(--color-neutral-100); outline-offset: -2px; box-shadow: var(--shadow-sm)"><img src="assets/avatars/teal-beanie.png" alt="Juno" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated"></div>
+            <div style="width: 30px; height: 30px; margin-left: -9px; border-radius: 8px; overflow: hidden; background: var(--color-neutral-300); outline: 2px solid var(--color-neutral-100); outline-offset: -2px; box-shadow: var(--shadow-sm)"><img src="assets/avatars/sleepy-mint.png" alt="Pip" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated"></div>
+            <div style="width: 30px; height: 30px; margin-left: -9px; border-radius: 8px; overflow: hidden; background: var(--color-neutral-300); outline: 2px solid var(--color-neutral-100); outline-offset: -2px; box-shadow: var(--shadow-sm)"><img src="assets/avatars/mint-beanie.png" alt="Wren" style="width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated"></div>
+          </div>
+          <div style="flex: 1; min-width: 0">
+            <div style="font-size: 13px; font-weight: 700">Team Kelp</div>
+            <div style="font-size: 11px; color: color-mix(in srgb, var(--color-text) 52%, transparent)">Shipped with 0:04 left</div>
+          </div>
+          <button class="btn btn-secondary" style="border-radius: 999px; font-size: 11px; padding: 6px 12px">Trace</button>
+        </div>
+
+        <div style="padding: 0 4px; display: flex; flex-direction: column; gap: 8px">
+          <h4 style="margin: 0; font-size: 23px; line-height: 1.2; text-wrap: pretty">Three tiers, one hero</h4>
+          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 68%, transparent); text-wrap: pretty">Cut the fourth tier and spent the whole budget on one warm hero. The middle plan is physically bigger, not just highlighted.</p>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px">
+            <span class="tag tag-accent">Warm</span>
+            <span class="tag tag-outline">3 revisions</span>
+          </div>
+        </div>
+
+        <div style="background: var(--color-neutral-200); border-radius: 18px; padding: 11px 13px; display: flex; align-items: center; gap: 11px">
+          <button style="{{ kitHeatBtn }}" onClick="{{ kitLike }}" aria-label="Add heat">
+            <span style="font-size: 15px">🔥</span>
+            <span>{{ kitHeatCount }}</span>
+          </button>
+          <div style="flex: 1; min-width: 0">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 5px">
+              <span style="font-size: 11px; font-weight: 700">{{ kitHeatLabel }}</span>
+              <span style="font-size: 10px; color: color-mix(in srgb, var(--color-text) 50%, transparent)">{{ kitHeatTotal }}</span>
+            </div>
+            <div style="position: relative; width: 100%; height: 5px; border-radius: 999px; background: var(--color-neutral-400)">
+              <div style="{{ kitHeatFill }}"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; padding: 0 4px">
+          <div style="flex: 1; min-width: 0">
+            <div style="font-size: 11px; font-weight: 700">Your ranking</div>
+            <div style="font-size: 10px; color: color-mix(in srgb, var(--color-text) 50%, transparent)">{{ kitRankLabel }}</div>
+          </div>
+          <div style="display: flex; gap: 3px; background: var(--color-neutral-200); border-radius: 999px; padding: 3px; flex-shrink: 0">
+            <sc-for list="{{ kitRankOpts }}" as="r" hint-placeholder-count="5">
+              <button style="{{ r.style }}" onClick="{{ r.pick }}" aria-label="{{ r.aria }}">{{ r.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; padding: 0 2px">
+          <button class="btn btn-icon btn-secondary" style="border-radius: 999px; flex-shrink: 0" aria-label="Previous submission"><i data-lucide="chevron-left"></i></button>
+          <button class="btn btn-primary" style="border-radius: 999px; flex: 1">Next submission <i data-lucide="arrow-right"></i></button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; max-width: 380px">
+        <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow-sm)">
+          <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 6px">Panel</div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 65%, transparent)">404px, 26px radius, 16px inset from the top-left of the canvas, shadow-lg. No scrim — the room stays lit. Header, heat, ranking and nav are pinned; only the submission body scrolls. Cards swap in from the left over 340ms, 16px with a blur-out. Left and right arrow keys page it.</p>
+        </div>
+        <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow-sm)">
+          <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 6px">Pager dots</div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 65%, transparent)">5px discs beside the counter. Current is accent-500, one you've already ranked is sage-600, untouched is ink at 20%. They're the progress bar for the whole pile — never a numbered stepper.</p>
+        </div>
+        <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow-sm)">
+          <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 6px">Heat</div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 65%, transparent)">The instant reaction. A secondary pill that turns terracotta on the first tap and counts up to five; every tap throws a 🔥 across the canvas and bumps the room total. The 5px track underneath is the room's, not yours.</p>
+        </div>
+        <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow-sm)">
+          <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 6px">Ranking</div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 65%, transparent)">The considered one. The segment trough again, 26px round options, filling left to right so it reads as a level and not a radio. A word sits under the label so the number means something; tapping the active number clears it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3 style="margin: 0 0 6px">Buttons</h3>
+    <p style="margin: 0 0 16px; font-size: 13px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">Pills throughout — terracotta for the one thing that matters, outline for everything else.</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 28px; background: var(--color-neutral-100); border-radius: var(--radius-lg); padding: 22px; box-shadow: var(--shadow-sm)">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Primary</div>
+        <button class="btn btn-primary" style="border-radius: 999px">Start the battle</button>
+        <button class="btn btn-primary" style="border-radius: 999px; padding: 6px 14px; font-size: 12px">Small</button>
+        <button class="btn btn-primary" style="border-radius: 999px" disabled="{{ true }}">Disabled</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Secondary</div>
+        <button class="btn btn-secondary" style="border-radius: 999px">Skip round</button>
+        <button class="btn btn-secondary" style="border-radius: 999px; padding: 6px 14px; font-size: 12px">Small</button>
+        <button class="btn btn-secondary" style="border-radius: 999px" disabled="{{ true }}">Disabled</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Ghost & icon</div>
+        <button class="btn btn-ghost">Surprise me</button>
+        <div style="display: flex; gap: 8px">
+          <button class="btn btn-icon btn-secondary" style="border-radius: 999px" aria-label="Close"><i data-lucide="x"></i></button>
+          <button class="btn btn-icon btn-secondary" style="border-radius: 999px" aria-label="Settings"><i data-lucide="sliders-horizontal"></i></button>
+          <button class="btn btn-icon btn-secondary" style="border-radius: 999px" aria-label="Timer"><i data-lucide="timer"></i></button>
+          <button class="btn btn-icon btn-primary" style="border-radius: 999px" aria-label="Send"><i data-lucide="arrow-right"></i></button>
+        </div>
+        <div style="font-size: 11px; color: color-mix(in srgb, var(--color-text) 50%, transparent); max-width: 190px">Lucide at stroke-width 2.75, 18px in a 999px pill. Over the canvas, wrap any control in a cream pill so it never fights the art.</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Emoji tray</div>
+        <div style="display: flex; gap: 6px; background: var(--color-neutral-200); border-radius: 999px; padding: 6px">
+          <button class="btn btn-icon" style="border-radius: 999px; background: var(--color-neutral-100); box-shadow: var(--shadow-sm)" onClick="{{ fireEmoji }}"><span>🔥</span></button>
+          <button class="btn btn-icon" style="border-radius: 999px; background: var(--color-neutral-100); box-shadow: var(--shadow-sm)" onClick="{{ fireEmoji }}"><span>👏</span></button>
+          <button class="btn btn-icon" style="border-radius: 999px; background: var(--color-neutral-100); box-shadow: var(--shadow-sm)" onClick="{{ fireEmoji }}"><span>💀</span></button>
+          <button class="btn btn-icon" style="border-radius: 999px; background: var(--color-neutral-100); box-shadow: var(--shadow-sm)" onClick="{{ fireEmoji }}"><span>🤯</span></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3 style="margin: 0 0 6px">Controls</h3>
+    <p style="margin: 0 0 16px; font-size: 13px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">The setup vocabulary: a 34×19 switch, a 5px-track slider with a 13px knob, a pill segment for four choices or fewer, and the combo row that opens a menu sideways. Live in <a href="Battle Setup Popovers.dc.html">the setup screen</a>.</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; max-width: 1180px">
+
+      <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-sm)">
+        <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 14px">Switch</div>
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <sc-for list="{{ kitSwitches }}" as="s" hint-placeholder-count="3">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+              <span style="{{ s.labelStyle }}">{{ s.label }}</span>
+              <button style="{{ s.track }}" onClick="{{ s.toggle }}" aria-label="{{ s.label }}"><span style="{{ s.knob }}"></span></button>
+            </div>
+          </sc-for>
+        </div>
+        <p style="margin: 16px 0 0; font-size: 12px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 55%, transparent)">accent-500 on, neutral-400 off, cream knob, inset shadow on the track. Disabled drops to 45%.</p>
+      </div>
+
+      <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-sm)">
+        <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 14px">Slider</div>
+        <div style="display: flex; flex-direction: column; gap: 14px">
+          <sc-for list="{{ kitSliders }}" as="tr" hint-placeholder-count="2">
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px">
+                <span style="font-weight: 600">{{ tr.label }}</span>
+                <span style="color: color-mix(in srgb, var(--color-text) 50%, transparent)">{{ tr.readout }}</span>
+              </div>
+              <div style="height: 14px; display: flex; align-items: center; cursor: pointer; touch-action: none" onPointerDown="{{ tr.down }}">
+                <div style="position: relative; width: 100%; height: 5px; border-radius: 999px; background: var(--color-neutral-300)">
+                  <div style="{{ tr.fill }}"></div>
+                  <div style="{{ tr.knob }}"></div>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <p style="margin: 16px 0 0; font-size: 12px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 55%, transparent)">The whole 14px band is the target, not just the knob. Value always sits top-right of the track.</p>
+      </div>
+
+      <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-sm)">
+        <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 14px">Segment</div>
+        <div style="display: flex; gap: 3px; background: var(--color-neutral-200); border-radius: 999px; padding: 3px; margin-bottom: 10px">
+          <sc-for list="{{ kitEffort }}" as="e" hint-placeholder-count="4">
+            <button style="{{ e.style }}" onClick="{{ e.pick }}">{{ e.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 3px; background: var(--color-neutral-200); border-radius: 12px; padding: 3px; width: 104px">
+          <sc-for list="{{ kitTeams }}" as="t" hint-placeholder-count="4">
+            <button style="{{ t.style }}" onClick="{{ t.pick }}">{{ t.label }}</button>
+          </sc-for>
+        </div>
+        <p style="margin: 16px 0 0; font-size: 12px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 55%, transparent)">Selected pill is opaque cream with shadow-sm, so the group still reads as one object. Stack it when the labels are words.</p>
+      </div>
+
+      <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-sm)">
+        <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 14px">Combo row &amp; nesting</div>
+        <div style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px">
+          <div style="{{ kitComboIdle }}">
+            <span style="flex: 1; text-align: left"><span style="display: block; font-size: 11px; font-weight: 700">Closed</span><span style="display: block; font-size: 9px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">summary of what's inside</span></span>
+            <span style="font-size: 11px; opacity: 0.5">›</span>
+          </div>
+          <div style="{{ kitComboOpen }}">
+            <span style="flex: 1; text-align: left"><span style="display: block; font-size: 11px; font-weight: 700">Open</span><span style="display: block; font-size: 9px; opacity: 0.75">menu is showing to the right</span></span>
+            <span style="font-size: 11px; opacity: 0.6">›</span>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 12px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 65%, transparent)">Two lines — label plus a live summary, so the panel answers the question unopened. Root panel 408px, 16px radius. Menus are anchored to the panel, not the row: 210px wide, 10px to its right, flush with its top edge, 14px radius, their lists capped with internal scroll. One menu open at a time.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3 style="margin: 0 0 6px">Color</h3>
+    <p style="margin: 0 0 16px; font-size: 13px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">Cream ground, terracotta accent, sage second voice — every step is a token from the Organic ramps.</p>
+    <div style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; max-width: 900px">
+      <div style="height: 56px; border-radius: 10px; background: var(--color-neutral-100)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-neutral-200)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-neutral-300)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-neutral-400)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-neutral-500)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-neutral-600)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-neutral-700)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-neutral-800)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-neutral-900)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-100)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-200)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-300)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-400)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-500)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-600)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-700)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-800)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-900)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-2-100)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-2-200)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-2-300)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-2-400)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-2-500)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-2-600)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-2-700)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-2-800)"></div>
+      <div style="height: 56px; border-radius: 10px; background: var(--color-accent-2-900)"></div>
+    </div>
+    <div style="display: flex; gap: 26px; flex-wrap: wrap; margin-top: 18px; font-size: 12px; color: color-mix(in srgb, var(--color-text) 60%, transparent)">
+      <div><strong style="font-family: var(--font-heading); font-weight: 400">Ground</strong> — bg #f5ead8, surfaces neutral-100</div>
+      <div><strong style="font-family: var(--font-heading); font-weight: 400">Accent</strong> — accent-500 fills, accent-700 for accent text</div>
+      <div><strong style="font-family: var(--font-heading); font-weight: 400">Second voice</strong> — sage for winners and "on brief"</div>
+      <div><strong style="font-family: var(--font-heading); font-weight: 400">Live</strong> — #c0392b dot only, never a fill</div>
+    </div>
+  </section>
+
+  <section>
+    <h3 style="margin: 0 0 6px">Type</h3>
+    <p style="margin: 0 0 16px; font-size: 13px; color: color-mix(in srgb, var(--color-text) 55%, transparent)">Caprasimo for anything with a voice, Figtree for anything you read. Nothing under 11px in overlays; 24px+ over the canvas.</p>
+    <div style="background: var(--color-neutral-100); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 14px; max-width: 900px">
+      <div style="display: flex; align-items: baseline; gap: 18px"><span style="width: 150px; flex-shrink: 0; font-size: 11px; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Display / 46 Caprasimo</span><span style="font-family: var(--font-heading); font-size: 46px; line-height: 1.1">Round three</span></div>
+      <div style="display: flex; align-items: baseline; gap: 18px"><span style="width: 150px; flex-shrink: 0; font-size: 11px; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Title / 25</span><span style="font-family: var(--font-heading); font-size: 25px">Juno takes it by four</span></div>
+      <div style="display: flex; align-items: baseline; gap: 18px"><span style="width: 150px; flex-shrink: 0; font-size: 11px; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Sheet title / 20</span><span style="font-family: var(--font-heading); font-size: 20px">Mika's take</span></div>
+      <div style="display: flex; align-items: baseline; gap: 18px"><span style="width: 150px; flex-shrink: 0; font-size: 11px; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Body / 15 Figtree</span><span style="font-size: 15px">The brief was warm, rounded, and a little bit stubborn about whitespace.</span></div>
+      <div style="display: flex; align-items: baseline; gap: 18px"><span style="width: 150px; flex-shrink: 0; font-size: 11px; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Detail / 13</span><span style="font-size: 13px; color: color-mix(in srgb, var(--color-text) 65%, transparent)">3 agents ready · 2 min rounds</span></div>
+      <div style="display: flex; align-items: baseline; gap: 18px"><span style="width: 150px; flex-shrink: 0; font-size: 11px; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Eyebrow / 11 · 700 · 0.09em</span><span style="font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-accent-700)">Entry 2 of 3</span></div>
+      <div style="display: flex; align-items: baseline; gap: 18px"><span style="width: 150px; flex-shrink: 0; font-size: 11px; color: color-mix(in srgb, var(--color-text) 50%, transparent)">Model badge / 9 · 700</span><span style="font-size: 9px; font-weight: 700; background: var(--color-accent-200); color: var(--color-accent-800); border-radius: 999px; padding: 2px 6px">S4.5</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h3 style="margin: 0 0 6px">Overlay rules</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; max-width: 1100px">
+      <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow-sm)">
+        <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 6px">Sheet</div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 65%, transparent)">Floats: 12px inset top/right/bottom, 392px wide, 28px radius, shadow-lg. Slides 24px in from the right over 380ms with a blur-out. No scrim — the room stays alive behind it.</p>
+      </div>
+      <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow-sm)">
+        <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 6px">Modal</div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 65%, transparent)">Centred, 520px, ink scrim at 46% with 3px blur. Rises 10px and un-blurs over 340ms. Reserved for results and decisions — never for browsing.</p>
+      </div>
+      <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow-sm)">
+        <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 6px">Layers</div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 65%, transparent)">Room art → avatars → HUD pills → sheet → scrim → modal → emoji bursts (always on top, always pointer-events: none).</p>
+      </div>
+      <div style="background: var(--color-neutral-100); border-radius: var(--radius-md); padding: 18px; box-shadow: var(--shadow-sm)">
+        <div style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 6px">Motion</div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--color-text) 65%, transparent)">One easing everywhere: cubic-bezier(.22,1,.3,1). Overlays 260–380ms. Idle avatar bob 3–4s, ±5px, offset per agent so they never sync.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const KIT_EFFORTS = ['Instant', 'Balanced', 'Deep', 'Max'];
+
+const STATUSES = [
+  { label: 'Thinking', color: 'var(--color-accent-500)', shimmer: true },
+  { label: 'Working', color: 'var(--color-accent-2-600)', shimmer: true },
+  { label: 'Reviewing', color: 'var(--color-neutral-600)', shimmer: true },
+  { label: 'Shipped', color: 'var(--color-accent-2-700)', shimmer: false }
+];
+
+const ROSTER = [
+  { name: 'Mika', src: 'assets/avatars/punk-pastel.png' },
+  { name: 'Odin', src: 'assets/avatars/goggles-beanie.png' },
+  { name: 'Juno', src: 'assets/avatars/teal-beanie.png' },
+  { name: 'Vex', src: 'assets/avatars/scarf-mohawk.png' }
+];
+
+const TRACES = [
+  { kind: 'say', icon: 'message-square', tone: 'neutral', time: '0:04', title: 'Read the brief', text: 'Warm, rounded, middle tier reads first. So the middle tier gets to be physically bigger — not just highlighted.' },
+  { kind: 'tool', icon: 'search', tone: 'accent', time: '0:11', title: 'search_refs', arg: '"seed box subscription pricing"', result: '12 refs' },
+  { kind: 'tool', icon: 'swatch-book', tone: 'accent', time: '0:26', title: 'set_palette', arg: 'cream · terracotta · sage', result: '3 tokens' },
+  { kind: 'say', icon: 'message-square', tone: 'neutral', time: '0:41', title: 'Changed my mind', text: 'Dropped the fourth tier. Three is the most anyone actually reads.' },
+  { kind: 'tool', icon: 'code', tone: 'accent', time: '1:12', title: 'write_layout', arg: 'pricing.html · 214 lines', result: 'ok' },
+  { kind: 'ship', icon: 'flag', tone: 'sage', time: '1:48', title: 'Submitted entry' },
+  { kind: 'live', icon: 'loader', tone: 'accent', time: 'now', title: 'Revising the hero crop', text: 'Working' }
+];
+
+class Component extends DCLogic {
+  state = { sheetOpen: true, modalOpen: false, bursts: [], sw: { a: true, b: false, c: true }, vals: { length: 45, spice: 30 }, effort: 'Balanced', teams: 2, tab: 'Persona', tabDemo: 'Traces', tabSmall: 'Live', heat: 0, rank: 0 };
+
+  icons = () => { if (window.lucide) window.lucide.createIcons(); };
+  componentDidUpdate() { this.icons(); }
+  componentDidMount() {
+    this.icons();
+    setTimeout(this.icons, 600);
+    this._t = setInterval(() => this.setState(s => ({ tick: (s.tick || 0) + 1 })), 2200);
+  }
+  componentWillUnmount() { clearInterval(this._t); }
+
+  basePill = 'display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2px 8px; font-size: 10px; font-weight: 700; white-space: nowrap; box-shadow: var(--shadow-sm); animation: pillIn 320ms cubic-bezier(0.22,1,0.3,1) both';
+  namePillStyle = this.basePill + '; background: var(--color-neutral-100)';
+  statusPillStyle = (s) => this.basePill + (s.shimmer
+    ? ', shimmer 1.6s linear infinite; background-image: linear-gradient(100deg, var(--color-neutral-100) 34%, var(--color-accent-100) 50%, var(--color-neutral-100) 66%); background-size: 240% 100%'
+    : '; background: var(--color-accent-2-100)');
+  statusDot = (s) => 'width: 5px; height: 5px; border-radius: 999px; flex-shrink: 0; background: ' + s.color;
+
+  segStyle = (active) => 'flex: 1; cursor: pointer; font-family: var(--font-body); font-size: 10px; font-weight: 700; line-height: 1.15; text-align: center; padding: 5px 4px; border-radius: 999px; transition: all 160ms cubic-bezier(0.22,1,0.3,1); '
+    + (active ? 'background-image: linear-gradient(180deg, var(--color-neutral-100), color-mix(in srgb, var(--color-neutral-200) 60%, var(--color-neutral-100))); color: var(--color-text); border: 1px solid color-mix(in srgb, #000 10%, transparent); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 14%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent)'
+      : 'background: transparent; border: 1px solid transparent; color: color-mix(in srgb, var(--color-text) 55%, transparent)');
+
+  tabStyle = (active) => 'flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-family: var(--font-body); font-size: 12px; font-weight: 700; line-height: 1.15; white-space: nowrap; padding: 7px 14px; border-radius: 999px; transition: all 160ms cubic-bezier(0.22,1,0.3,1); '
+    + (active ? 'background-image: linear-gradient(180deg, var(--color-neutral-100), color-mix(in srgb, var(--color-neutral-200) 60%, var(--color-neutral-100))); color: var(--color-text); border: 1px solid color-mix(in srgb, #000 10%, transparent); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 14%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent)'
+      : 'background: transparent; border: 1px solid transparent; color: color-mix(in srgb, var(--color-text) 55%, transparent)');
+
+  tabs = (list, key) => list.map(t => ({
+    label: t.label, count: t.count, hasCount: t.count != null,
+    style: this.tabStyle(t.label === this.state[key]),
+    pick: () => this.setState({ [key]: t.label })
+  }));
+
+  discTone = { neutral: 'var(--color-neutral-700)', accent: 'var(--color-accent-600)', sage: 'var(--color-accent-2-700)' };
+  discStyle = (tone, live) => 'display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex-shrink: 0; border-radius: 999px; background: var(--color-neutral-100); box-shadow: var(--shadow-sm); color: ' + this.discTone[tone]
+    + (live ? '; outline: 2px solid var(--color-accent-300); outline-offset: 0; animation: pulse 1.6s ease-in-out infinite' : '');
+  meterFill = (v) => 'position: absolute; left: 0; top: 0; height: 100%; width: ' + v + '%; border-radius: 999px; background: var(--color-accent-2-600)';
+
+  trackStyle = (on, disabled) => 'position: relative; width: 34px; height: 19px; border-radius: 999px; border: none; padding: 0; flex-shrink: 0; cursor: ' + (disabled ? 'not-allowed' : 'pointer')
+    + '; background: ' + (on ? 'var(--color-accent-500)' : 'var(--color-neutral-400)')
+    + '; box-shadow: inset 0 1px 3px color-mix(in srgb, #2e2b25 22%, transparent); transition: background 200ms cubic-bezier(0.22,1,0.3,1); opacity: ' + (disabled ? '0.45' : '1');
+
+  knobStyle = (on) => 'position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 999px; background: var(--color-neutral-100); box-shadow: var(--shadow-sm); transition: transform 220ms cubic-bezier(0.22,1,0.3,1); transform: translateX(' + (on ? '15px' : '0') + ')';
+
+  fillStyle = (v) => 'position: absolute; left: 0; top: 0; height: 100%; width: ' + v + '%; border-radius: 999px; background: var(--color-accent-500)';
+  sliderKnobStyle = (v) => 'position: absolute; top: 50%; left: ' + v + '%; width: 13px; height: 13px; margin-left: -6.5px; border-radius: 999px; background: var(--color-neutral-100); box-shadow: var(--shadow-md); transform: translateY(-50%); outline: 2px solid var(--color-accent-500); outline-offset: -2px';
+
+  comboStyle = (open) => 'display: flex; align-items: center; gap: 8px; width: 100%; cursor: pointer; font-family: var(--font-body); padding: 7px 9px; border-radius: 11px; border: 1px solid color-mix(in srgb, #000 10%, transparent); '
+    + (open ? 'background-image: linear-gradient(180deg, color-mix(in srgb, #fff 12%, var(--color-accent-500)), var(--color-accent-600)); color: var(--color-neutral-100); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 20%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 22%, transparent)'
+      : 'background-image: linear-gradient(180deg, var(--color-neutral-100), var(--color-neutral-200)); color: var(--color-text); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 12%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent)');
+
+  slide = (key) => (e) => {
+    const el = e.currentTarget;
+    const move = (ev) => {
+      const r = el.getBoundingClientRect();
+      const v = Math.max(0, Math.min(100, Math.round(((ev.clientX - r.left) / r.width) * 100)));
+      this.setState(s => ({ vals: Object.assign({}, s.vals, { [key]: v }) }));
+    };
+    const up = () => window.removeEventListener('pointermove', move);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up, { once: true });
+    move(e);
+  };
+
+  raised = 'border: 1px solid color-mix(in srgb, #000 10%, transparent); background-image: linear-gradient(180deg, color-mix(in srgb, #fff 12%, var(--color-accent-500)), var(--color-accent-600)); color: var(--color-neutral-100); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 20%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 24%, transparent)';
+
+  rankStyle = (on) => 'width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-family: var(--font-body); font-size: 12px; font-weight: 700; line-height: 1; border-radius: 999px; transition: all 160ms cubic-bezier(0.22,1,0.3,1); '
+    + (on ? this.raised : 'background: transparent; border: 1px solid transparent; color: color-mix(in srgb, var(--color-text) 50%, transparent)');
+
+  pagerDot = (state) => 'width: 5px; height: 5px; border-radius: 999px; background: '
+    + (state === 'current' ? 'var(--color-accent-500)' : state === 'ranked' ? 'var(--color-accent-2-600)' : 'color-mix(in srgb, var(--color-text) 20%, transparent)');
+
+  openSheet = () => this.setState({ sheetOpen: true });
+  closeSheet = () => this.setState({ sheetOpen: false });
+  openModal = () => this.setState({ modalOpen: true });
+  closeModal = () => this.setState({ modalOpen: false });
+  fireEmoji = (e) => {
+    const glyph = (e && e.currentTarget && /\p{Emoji}/u.test(e.currentTarget.textContent || '')
+      ? (e.currentTarget.textContent.match(/\p{Extended_Pictographic}/u) || ['🔥'])[0] : '🔥');
+    const id = Math.random().toString(36).slice(2);
+    const left = 40 + Math.random() * 300;
+    const bottom = 150 + Math.random() * 40;
+    const b = {
+      id, glyph,
+      style: 'position:absolute;left:' + left + 'px;bottom:' + bottom + 'px;font-size:34px;pointer-events:none;z-index:5;animation:fire 1500ms cubic-bezier(.22,1,.3,1) both'
+    };
+    this.setState(s => ({ bursts: [...s.bursts, b] }));
+    setTimeout(() => this.setState(s => ({ bursts: s.bursts.filter(x => x.id !== id) })), 1600);
+  };
+  renderVals() {
+    return {
+      sheetOpen: this.state.sheetOpen,
+      modalOpen: this.state.modalOpen,
+      bursts: this.state.bursts,
+      openSheet: this.openSheet, closeSheet: this.closeSheet,
+      openModal: this.openModal, closeModal: this.closeModal,
+      fireEmoji: this.fireEmoji,
+      kitTabs: this.tabs([{ label: 'Persona' }, { label: 'Traces', count: 14 }], 'tabDemo'),
+      kitTabsSmall: this.tabs([{ label: 'Live' }, { label: 'Replay' }], 'tabSmall'),
+      profileTabs: this.tabs([{ label: 'Persona' }, { label: 'Traces', count: 14 }], 'tab'),
+      isPersona: this.state.tab === 'Persona',
+      isTraces: this.state.tab === 'Traces',
+      personaTraits: [
+        { label: 'Boldness', v: 62 },
+        { label: 'Restraint', v: 88 },
+        { label: 'Speed', v: 41 }
+      ].map(m => ({ label: m.label, readout: m.v, fill: this.meterFill(m.v) })),
+      traces: TRACES.map((t, i) => ({
+        icon: t.icon, title: t.title, time: t.time, text: t.text, arg: t.arg, result: t.result,
+        isSay: t.kind === 'say', isTool: t.kind === 'tool', isShip: t.kind === 'ship', isLive: t.kind === 'live',
+        disc: this.discStyle(t.tone, t.kind === 'live'),
+        rail: i === TRACES.length - 1 ? 'display: none' : 'flex: 1; width: 2px; margin: 4px 0 0; border-radius: 999px; background: var(--color-neutral-300)',
+        livePill: this.statusPillStyle(STATUSES[1]),
+        liveDot: this.statusDot(STATUSES[1])
+      })),
+      traceLegend: [
+        { icon: 'message-square', tone: 'neutral', label: 'Said out loud — neutral-700 glyph' },
+        { icon: 'code', tone: 'accent', label: 'Tool call — terracotta glyph' },
+        { icon: 'flag', tone: 'sage', label: 'Submitted — sage glyph' },
+        { icon: 'loader', tone: 'accent', label: 'Running now — accent-300 ring, pulsing' }
+      ].map(l => ({ icon: l.icon, label: l.label, disc: this.discStyle(l.tone, l.label.indexOf('Running') === 0) })),
+      kitSwitches: [
+        { key: 'a', label: 'On', dis: false },
+        { key: 'b', label: 'Off', dis: false },
+        { key: 'c', label: 'Disabled', dis: true }
+      ].map(d => ({
+        label: d.label,
+        labelStyle: 'font-size: 13px; ' + (d.dis ? 'color: color-mix(in srgb, var(--color-text) 40%, transparent)' : ''),
+        track: this.trackStyle(this.state.sw[d.key], d.dis),
+        knob: this.knobStyle(this.state.sw[d.key]),
+        toggle: d.dis ? () => {} : () => this.setState(s => ({ sw: Object.assign({}, s.sw, { [d.key]: !s.sw[d.key] }) }))
+      })),
+      kitSliders: [
+        { key: 'length', label: 'Combat length', fmt: (v) => { const L = [15, 30, 45, 60, 90, 120, 180, 240], m = L[Math.round((v / 100) * (L.length - 1))]; return m < 60 ? m + ' min' : (m / 60) + (m === 60 ? ' hour' : ' hours'); } },
+        { key: 'spice', label: 'Brief spiciness', fmt: (v) => v + '%' }
+      ].map(d => ({
+        label: d.label,
+        readout: d.fmt(this.state.vals[d.key]),
+        fill: this.fillStyle(this.state.vals[d.key]),
+        knob: this.sliderKnobStyle(this.state.vals[d.key]),
+        down: this.slide(d.key)
+      })),
+      kitEffort: KIT_EFFORTS.map(e => ({ label: e, style: this.segStyle(e === this.state.effort), pick: () => this.setState({ effort: e }) })),
+      kitTeams: [1, 2, 3, 4].map(n => ({
+        label: n + (n === 1 ? ' team' : ' teams'),
+        style: this.segStyle(n === this.state.teams),
+        pick: () => this.setState({ teams: n })
+      })),
+      roster: ROSTER.map((r, i) => {
+        const step = ((this.state.tick || 0) + i) % (STATUSES.length + 1);
+        const isName = step === STATUSES.length;
+        const s = STATUSES[isName ? 0 : step];
+        return {
+          name: r.name, src: r.src,
+          isName, isStatus: !isName,
+          status: s.label,
+          namePill: this.namePillStyle,
+          statusPill: this.statusPillStyle(s),
+          dot: this.statusDot(s)
+        };
+      }),
+      statusChips: STATUSES.concat([{ label: 'Idle', color: 'transparent', shimmer: false }]).map(s => ({
+        label: s.label,
+        pill: s.label === 'Idle' ? this.namePillStyle : this.statusPillStyle(s),
+        dot: s.label === 'Idle' ? 'display: none' : this.statusDot(s)
+      })),
+      kitTinyBtn: 'cursor: pointer; font-family: var(--font-body); font-size: 9px; font-weight: 700; line-height: 1.15; padding: 4px 9px; border-radius: 999px; color: color-mix(in srgb, var(--color-text) 68%, transparent); border: 1px solid color-mix(in srgb, #000 10%, transparent); background-image: linear-gradient(180deg, var(--color-neutral-100), var(--color-neutral-200)); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 12%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent)',
+      kitDots: [
+        this.state.rank > 0 ? 'ranked' : 'current',
+        'idle', 'idle'
+      ].map((s, n) => ({ style: this.pagerDot(n === 0 ? 'current' : s) })),
+      kitLike: (e) => {
+        if (this.state.heat < 5) this.setState(s => ({ heat: s.heat + 1 }));
+        this.fireEmoji(e);
+      },
+      kitHeatCount: this.state.heat > 0 ? '\u00d7' + this.state.heat : 'Heat',
+      kitHeatLabel: this.state.heat === 0 ? 'Tap to heat it up' : this.state.heat >= 5 ? 'Maxed out' : 'Tap again for more',
+      kitHeatTotal: (128 + this.state.heat) + ' from the room',
+      kitHeatFill: 'position: absolute; left: 0; top: 0; height: 100%; width: ' + Math.min(100, Math.round(((128 + this.state.heat) / 180) * 100)) + '%; border-radius: 999px; background: var(--color-accent-500); transition: width 260ms cubic-bezier(0.22,1,0.3,1)',
+      kitHeatBtn: 'display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-family: var(--font-body); font-size: 12px; font-weight: 700; line-height: 1; padding: 9px 13px; border-radius: 999px; flex-shrink: 0; '
+        + (this.state.heat > 0 ? this.raised
+          : 'border: 1px solid color-mix(in srgb, #000 10%, transparent); background-image: linear-gradient(180deg, var(--color-neutral-100), var(--color-neutral-200)); color: var(--color-text); box-shadow: 0 1px 2px color-mix(in srgb, #2e2b25 12%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent)'),
+      kitRankOpts: [1, 2, 3, 4, 5].map(n => ({
+        label: n, aria: 'Rank ' + n + ' of 5',
+        style: this.rankStyle(n <= this.state.rank),
+        pick: () => this.setState(s => ({ rank: s.rank === n ? 0 : n }))
+      })),
+      kitRankLabel: ['Not scored yet', 'Missed the brief', 'Rough', 'Solid', 'Would ship it', 'Best in the room'][this.state.rank],
+      kitComboIdle: this.comboStyle(false),
+      kitComboOpen: this.comboStyle(true)
+    };
+  }
+}
+
+</script>
+</body>
+</html>
