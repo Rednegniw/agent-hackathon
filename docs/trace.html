@@ -1,0 +1,426 @@
+<title>Arena run trace</title>
+<style>
+  :root {
+    --paper: #eef1f5;
+    --card: #f7f9fb;
+    --ink: #161a21;
+    --muted: #646e7e;
+    --rule: #d5dce4;
+    --time: #2c46b8;
+    --color: #b4610f;
+    --ok: #1c7a52;
+    --sys: #7b8493;
+
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #11141a;
+      --card: #171b23;
+      --ink: #e4e8ee;
+      --muted: #8b95a5;
+      --rule: #262d38;
+      --time: #7c93ff;
+      --color: #e8954a;
+      --ok: #4fc08d;
+      --sys: #6b7484;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #11141a;
+    --card: #171b23;
+    --ink: #e4e8ee;
+    --muted: #8b95a5;
+    --rule: #262d38;
+    --time: #7c93ff;
+    --color: #e8954a;
+    --ok: #4fc08d;
+    --sys: #6b7484;
+  }
+
+  :root[data-theme="light"] {
+    --paper: #eef1f5;
+    --card: #f7f9fb;
+    --ink: #161a21;
+    --muted: #646e7e;
+    --rule: #d5dce4;
+    --time: #2c46b8;
+    --color: #b4610f;
+    --ok: #1c7a52;
+    --sys: #7b8493;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+    display: flex;
+    flex-direction: column;
+    gap: 44px;
+  }
+
+  .label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Masthead */
+  header { display: flex; flex-direction: column; gap: 14px; }
+
+  h1 {
+    font-size: clamp(28px, 4.5vw, 42px);
+    font-weight: 640;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  .runid {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    word-break: break-all;
+  }
+
+  .lede { max-width: 62ch; color: var(--muted); font-size: 15px; margin: 0; }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  /* Stat strip */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .stat { background: var(--card); padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; }
+  .stat b {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .stat.good b { color: var(--ok); }
+
+  section { display: flex; flex-direction: column; gap: 14px; }
+  h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; margin: 0; }
+
+  /* Swimlanes */
+  .lanes {
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: var(--card);
+    overflow-x: auto;
+  }
+  .lanes-inner { min-width: 660px; }
+
+  .axis {
+    position: relative;
+    height: 26px;
+    border-bottom: 1px solid var(--rule);
+    margin-left: 92px;
+  }
+  .tick {
+    position: absolute;
+    top: 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    transform: translateX(-50%);
+    padding-top: 6px;
+  }
+
+  .lane { display: flex; align-items: stretch; border-bottom: 1px solid var(--rule); }
+  .lane:last-child { border-bottom: 0; }
+
+  .lane-name {
+    width: 92px;
+    flex: none;
+    padding: 9px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border-right: 1px solid var(--rule);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .t-time { background: var(--time); }
+  .t-color { background: var(--color); }
+
+  .track { position: relative; flex: 1; min-height: 34px; }
+
+  .band {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-left: 1px solid var(--rule);
+  }
+  .band.build { background: color-mix(in srgb, var(--muted) 7%, transparent); }
+  .band.submit { background: color-mix(in srgb, var(--ok) 9%, transparent); }
+
+  .ev {
+    position: absolute;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin: -4px 0 0 -4px;
+    border-radius: 50%;
+    background: var(--sys);
+  }
+  .ev.k-theme { background: var(--ink); }
+  .ev.k-build { background: var(--muted); border-radius: 1px; }
+  .ev.k-submit {
+    width: 12px; height: 12px; margin: -6px 0 0 -6px;
+    background: var(--ok);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent);
+  }
+  .ev.k-message { background: transparent; border: 1.5px solid var(--sys); }
+
+  .phase-key { display: flex; flex-wrap: wrap; gap: 16px; }
+  .key { display: flex; align-items: center; gap: 6px; }
+  .swatch { width: 12px; height: 12px; border-radius: 2px; border: 1px solid var(--rule); }
+
+  /* Submissions */
+  .tracks { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+  .tcard { border: 1px solid var(--rule); border-radius: 3px; background: var(--card); overflow: hidden; }
+  .tcard header { padding: 12px 16px; border-bottom: 1px solid var(--rule); gap: 4px; }
+  .tcard h3 { margin: 0; font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .tcard.time h3 { color: var(--time); }
+  .tcard.color h3 { color: var(--color); }
+
+  .sub { padding: 12px 16px; border-bottom: 1px solid var(--rule); display: flex; flex-direction: column; gap: 5px; }
+  .sub:last-child { border-bottom: 0; }
+  .sub-who { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+  .sub-pitch { font-size: 14px; }
+  .sub a {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    word-break: break-all;
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+    align-self: flex-start;
+  }
+  .sub a:hover { color: var(--ink); border-bottom-color: currentColor; }
+  .sub a:focus-visible { outline: 2px solid var(--time); outline-offset: 2px; }
+
+  /* Log */
+  .logwrap { border: 1px solid var(--rule); border-radius: 3px; background: var(--card); overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: 12px; min-width: 620px; }
+  th {
+    text-align: left;
+    padding: 9px 12px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    border-bottom: 1px solid var(--rule);
+    position: sticky;
+    top: 0;
+    background: var(--card);
+  }
+  td { padding: 5px 12px; border-bottom: 1px solid color-mix(in srgb, var(--rule) 55%, transparent); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  .num { font-variant-numeric: tabular-nums; text-align: right; color: var(--muted); white-space: nowrap; }
+  .who { white-space: nowrap; }
+  .who.system { color: var(--sys); }
+  tr.phase-row td { background: color-mix(in srgb, var(--muted) 8%, transparent); font-weight: 600; }
+  tr.submit-row td { background: color-mix(in srgb, var(--ok) 8%, transparent); }
+  .kind { color: var(--muted); white-space: nowrap; }
+  .body { width: 100%; }
+
+  footer { border-top: 1px solid var(--rule); padding-top: 18px; color: var(--muted); font-size: 13px; }
+  code { font-family: var(--mono); font-size: 0.92em; background: color-mix(in srgb, var(--muted) 12%, transparent); padding: 1px 5px; border-radius: 2px; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="label">Arena run trace &middot; arena=daytona</div>
+    <h1>Six agents, two tracks, 93 seconds</h1>
+    <div class="runid">runs/events-2026-07-24T19-19-27-775Z.jsonl</div>
+    <p class="lede">
+      One full round against <strong>live Daytona sandboxes</strong>, driven by scripted agents so the
+      substrate is exercised without spending a single token. Every event below was written to an
+      append-only log; the office renders this same stream over SSE.
+    </p>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <section>
+    <h2>Timeline</h2>
+    <p class="lede">
+      One lane per agent. The parallelism is the point: all six claim a track, build, and ship
+      inside the same wall clock, each inside its own isolated sandbox.
+    </p>
+    <div class="lanes">
+      <div class="lanes-inner">
+        <div class="axis" id="axis"></div>
+        <div id="lanes"></div>
+      </div>
+    </div>
+    <div class="phase-key">
+      <div class="key"><span class="swatch" style="background:var(--card)"></span><span class="label">mingle</span></div>
+      <div class="key"><span class="swatch" style="background:color-mix(in srgb, var(--muted) 18%, transparent)"></span><span class="label">build</span></div>
+      <div class="key"><span class="swatch" style="background:color-mix(in srgb, var(--ok) 22%, transparent)"></span><span class="label">submit</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What shipped</h2>
+    <p class="lede">
+      Each URL was signed and health-checked before the submission was accepted, and served with no
+      <code>X-Frame-Options</code> and no CSP, so the office can iframe a submission live.
+      <strong>These particular sandboxes have since been reclaimed</strong>, so the links below are a
+      record of what was served, not a live demo.
+    </p>
+    <div class="tracks" id="tracks"></div>
+  </section>
+
+  <section>
+    <h2>Full log</h2>
+    <div class="logwrap">
+      <table>
+        <thead>
+          <tr><th class="num">seq</th><th class="num">t+s</th><th>agent</th><th>kind</th><th>body</th></tr>
+        </thead>
+        <tbody id="log"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    Generated from the arena's own event log, committed to the repo as
+    <code>fixtures/demo-run.jsonl</code>. Sandboxes were created with <code>KEEP_ALIVE=1</code>, which
+    disables auto-stop so preview URLs survive the orchestrator process, and reclaimed afterwards with
+    <code>pnpm --filter arena cleanup &lt;round&gt;</code>. For the stage run, keep them alive and
+    re-mint the signed URLs backstage.
+  </footer>
+</div>
+
+<script>
+  const EVENTS = [{"s":1,"t":0,"a":"system","k":"phase","b":"mingle","g":null,"to":null,"u":null},{"s":2,"t":0.65,"a":"juno","k":"thought","b":"Weighing time against color.","g":null,"to":null,"u":null},{"s":3,"t":0.65,"a":"juno","k":"theme","b":"time","g":"time","to":null,"u":null},{"s":4,"t":0.65,"a":"juno","k":"message","b":"What angle are you taking?","g":null,"to":"ada","u":null},{"s":5,"t":0.65,"a":"ada","k":"thought","b":"Weighing time against color.","g":null,"to":null,"u":null},{"s":6,"t":0.65,"a":"ada","k":"theme","b":"time","g":"time","to":null,"u":null},{"s":7,"t":0.65,"a":"ada","k":"message","b":"What angle are you taking?","g":null,"to":"juno","u":null},{"s":8,"t":0.69,"a":"vera","k":"thought","b":"Weighing time against color.","g":null,"to":null,"u":null},{"s":9,"t":0.69,"a":"vera","k":"theme","b":"color","g":"color","to":null,"u":null},{"s":10,"t":0.69,"a":"vera","k":"message","b":"What angle are you taking?","g":null,"to":"rex","u":null},{"s":11,"t":0.74,"a":"otto","k":"thought","b":"Weighing time against color.","g":null,"to":null,"u":null},{"s":12,"t":0.74,"a":"otto","k":"theme","b":"time","g":"time","to":null,"u":null},{"s":13,"t":0.74,"a":"otto","k":"message","b":"What angle are you taking?","g":null,"to":"ada","u":null},{"s":14,"t":0.81,"a":"rex","k":"thought","b":"Weighing time against color.","g":null,"to":null,"u":null},{"s":15,"t":0.81,"a":"rex","k":"theme","b":"color","g":"color","to":null,"u":null},{"s":16,"t":0.81,"a":"rex","k":"message","b":"What angle are you taking?","g":null,"to":"iris","u":null},{"s":17,"t":0.89,"a":"iris","k":"thought","b":"Weighing time against color.","g":null,"to":null,"u":null},{"s":18,"t":0.89,"a":"iris","k":"theme","b":"color","g":"color","to":null,"u":null},{"s":19,"t":0.89,"a":"iris","k":"message","b":"What angle are you taking?","g":null,"to":"rex","u":null},{"s":20,"t":9,"a":"system","k":"phase","b":"build","g":null,"to":null,"u":null},{"s":21,"t":9.69,"a":"vera","k":"build","b":"wrote app/index.html","g":null,"to":null,"u":null},{"s":22,"t":9.7,"a":"ada","k":"build","b":"wrote app/index.html","g":null,"to":null,"u":null},{"s":23,"t":9.7,"a":"rex","k":"build","b":"wrote app/index.html","g":null,"to":null,"u":null},{"s":24,"t":9.73,"a":"iris","k":"build","b":"wrote app/index.html","g":null,"to":null,"u":null},{"s":25,"t":9.78,"a":"otto","k":"build","b":"wrote app/index.html","g":null,"to":null,"u":null},{"s":26,"t":9.78,"a":"juno","k":"build","b":"wrote app/index.html","g":null,"to":null,"u":null},{"s":27,"t":10.82,"a":"vera","k":"build","b":"dev server started on 3000","g":null,"to":null,"u":null},{"s":28,"t":10.82,"a":"vera","k":"thought","b":"Serving on 3000. Verifying before I submit.","g":null,"to":null,"u":null},{"s":29,"t":10.83,"a":"ada","k":"build","b":"dev server started on 3000","g":null,"to":null,"u":null},{"s":30,"t":10.83,"a":"ada","k":"thought","b":"Serving on 3000. Verifying before I submit.","g":null,"to":null,"u":null},{"s":31,"t":10.83,"a":"rex","k":"build","b":"dev server started on 3000","g":null,"to":null,"u":null},{"s":32,"t":10.83,"a":"rex","k":"thought","b":"Serving on 3000. Verifying before I submit.","g":null,"to":null,"u":null},{"s":33,"t":10.86,"a":"iris","k":"build","b":"dev server started on 3000","g":null,"to":null,"u":null},{"s":34,"t":10.86,"a":"iris","k":"thought","b":"Serving on 3000. Verifying before I submit.","g":null,"to":null,"u":null},{"s":35,"t":10.92,"a":"otto","k":"build","b":"dev server started on 3000","g":null,"to":null,"u":null},{"s":36,"t":10.92,"a":"otto","k":"thought","b":"Serving on 3000. Verifying before I submit.","g":null,"to":null,"u":null},{"s":37,"t":11.15,"a":"juno","k":"build","b":"dev server started on 3000","g":null,"to":null,"u":null},{"s":38,"t":11.15,"a":"juno","k":"thought","b":"Serving on 3000. Verifying before I submit.","g":null,"to":null,"u":null},{"s":39,"t":81.21,"a":"system","k":"phase","b":"submit","g":null,"to":null,"u":null},{"s":40,"t":81.93,"a":"otto","k":"submit","b":"The smallest countdown that works.","g":"time","to":null,"u":"https://3000-9u3cokeqx3yhpjyg.daytonaproxy01.net"},{"s":41,"t":81.93,"a":"rex","k":"submit","b":"Palettes that argue with each other.","g":"color","to":null,"u":"https://3000-munwo7ll9jif4k5d.daytonaproxy01.net"},{"s":42,"t":81.93,"a":"vera","k":"submit","b":"A clock that only tells you what you need.","g":"color","to":null,"u":"https://3000-df3jfjzhruzxxssl.daytonaproxy01.net"},{"s":43,"t":81.93,"a":"iris","k":"submit","b":"Colour distance you can actually see.","g":"color","to":null,"u":"https://3000-nswkzu2nee8in1vi.daytonaproxy01.net"},{"s":44,"t":81.93,"a":"ada","k":"submit","b":"A timer that is honest about drift.","g":"time","to":null,"u":"https://3000-at0lk5cocfviekpu.daytonaproxy01.net"},{"s":45,"t":82.14,"a":"juno","k":"submit","b":"One clock, no settings, no options.","g":"time","to":null,"u":"https://3000-npatpghreeyfcex1.daytonaproxy01.net"},{"s":46,"t":93.21,"a":"system","k":"phase","b":"judged","g":null,"to":null,"u":null},{"s":47,"t":93.22,"a":"system","k":"score","b":"round complete","g":null,"to":null,"u":null}];
+
+  const TOTAL = EVENTS[EVENTS.length - 1].t;
+  const AGENTS = ["ada", "otto", "juno", "rex", "vera", "iris"];
+  const el = (t, c, x) => { const n = document.createElement(t); if (c) n.className = c; if (x != null) n.textContent = x; return n; };
+  const pct = (t) => (t / TOTAL) * 100;
+
+  const trackOf = {};
+  for (const e of EVENTS) if (e.k === "theme") trackOf[e.a] = e.g;
+
+  const subs = EVENTS.filter((e) => e.k === "submit");
+  const phases = EVENTS.filter((e) => e.k === "phase");
+
+  /* Stat strip */
+  const provision = "206ms";
+  const stats = [
+    ["events", EVENTS.length],
+    ["agents", AGENTS.length],
+    ["submissions", subs.length + "/6", true],
+    ["failures", "0", true],
+    ["6 sandboxes in", provision],
+    ["wall clock", TOTAL.toFixed(1) + "s"],
+  ];
+  const statsEl = document.getElementById("stats");
+  for (const [k, v, good] of stats) {
+    const d = el("div", "stat" + (good ? " good" : ""));
+    d.append(el("b", null, String(v)), el("span", "label", k));
+    statsEl.append(d);
+  }
+
+  /* Axis */
+  const axis = document.getElementById("axis");
+  for (let s = 0; s <= TOTAL; s += 15) {
+    const t = el("div", "tick", s + "s");
+    t.style.left = pct(s) + "%";
+    axis.append(t);
+  }
+
+  /* Lanes */
+  const lanes = document.getElementById("lanes");
+  for (const a of AGENTS) {
+    const lane = el("div", "lane");
+    const name = el("div", "lane-name");
+    name.append(el("span", "dot t-" + trackOf[a]), el("span", null, a));
+
+    const track = el("div", "track");
+    phases.forEach((p, i) => {
+      const next = phases[i + 1];
+      const b = el("div", "band " + p.b);
+      b.style.left = pct(p.t) + "%";
+      b.style.width = pct((next ? next.t : TOTAL) - p.t) + "%";
+      track.append(b);
+    });
+
+    for (const e of EVENTS.filter((x) => x.a === a)) {
+      const d = el("div", "ev k-" + e.k);
+      d.style.left = pct(e.t) + "%";
+      d.title = "t+" + e.t + "s  " + e.k + ": " + e.b;
+      track.append(d);
+    }
+
+    lane.append(name, track);
+    lanes.append(lane);
+  }
+
+  /* Submissions by track */
+  const tracksEl = document.getElementById("tracks");
+  for (const g of ["time", "color"]) {
+    const card = el("div", "tcard " + g);
+    const head = el("header");
+    head.append(el("h3", null, g), el("span", "label", subs.filter((s) => s.g === g).length + " submissions"));
+    card.append(head);
+
+    for (const s of subs.filter((x) => x.g === g)) {
+      const row = el("div", "sub");
+      row.append(el("div", "sub-who", s.a), el("div", "sub-pitch", s.b));
+      const a = el("a", null, s.u.replace("https://", ""));
+      a.href = s.u;
+      a.target = "_blank";
+      a.rel = "noopener";
+      row.append(a);
+      card.append(row);
+    }
+    tracksEl.append(card);
+  }
+
+  /* Log table */
+  const log = document.getElementById("log");
+  for (const e of EVENTS) {
+    const tr = el("tr", e.k === "phase" ? "phase-row" : e.k === "submit" ? "submit-row" : "");
+    tr.append(el("td", "num", e.s), el("td", "num", e.t.toFixed(2)));
+
+    const who = el("td", "who" + (e.a === "system" ? " system" : ""), e.a);
+    if (trackOf[e.a]) who.style.color = "var(--" + trackOf[e.a] + ")";
+    tr.append(who, el("td", "kind", e.k));
+
+    let body = e.b;
+    if (e.k === "message") body = "to " + e.to + ": " + e.b;
+    if (e.k === "phase") body = "phase: " + e.b;
+    if (e.k === "submit") body = e.b + "  " + e.u.replace("https://", "");
+    tr.append(el("td", "body", body));
+    log.append(tr);
+  }
+</script>
