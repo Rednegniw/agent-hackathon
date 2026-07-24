@@ -6,18 +6,60 @@ import type { EventLog } from './log.js'
 export interface ServerDeps {
   log: EventLog
   state: () => unknown
+
+  /**
+   * Starts a round. Optional so a replay-only server can be stood up without
+   * one. Returns an ack, never the round's result: the round is watched on the
+   * event stream, not awaited over HTTP.
+   */
+  start?: (opts: { arena?: unknown; speed?: unknown }) => StartAck
 }
+
+export type StartAck =
+  | { ok: true; roundId: string }
+  /** 400 for a malformed request, 409 for a server that is simply busy. */
+  | { ok: false; reason: string; status?: 400 | 409 }
 
 export function startServer(deps: ServerDeps, port = Number(process.env.PORT ?? 4000)) {
   const app = express()
 
-  // The office runs on its own dev server, so every route is cross-origin.
-  app.use((_req, res, next) => {
+  app.use(express.json())
+
+  /**
+   * The office runs on its own dev server, so every route is cross-origin.
+   * A JSON POST is preflighted, so Allow-Origin alone is not enough: without
+   * Allow-Methods and Allow-Headers on the OPTIONS response the browser blocks
+   * the start request before the server ever sees it.
+   */
+  app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Last-Event-ID')
+
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(204)
+      return
+    }
     next()
   })
 
   app.get('/state', (_req, res) => res.json(deps.state()))
+
+  app.post('/start', (req, res) => {
+    if (!deps.start) {
+      res.status(501).json({ ok: false, reason: 'this server was started without a round runner' })
+      return
+    }
+
+    const ack = deps.start(req.body ?? {})
+
+    /**
+     * 202, not 200: the round is accepted and runs asynchronously. A rejection
+     * carries its own status so a busy server (409) is distinguishable from a
+     * bad payload (400) — the office retries one and not the other.
+     */
+    res.status(ack.ok ? 202 : (ack.status ?? 409)).json(ack)
+  })
 
   app.get('/events', (req, res) => {
     res.writeHead(200, {

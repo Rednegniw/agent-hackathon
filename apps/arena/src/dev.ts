@@ -1,142 +1,57 @@
 import './env.js'
-import type { BaseArena } from './arena-base.js'
-import { DaytonaArena, KEEP_ALIVE } from './arena-daytona.js'
-import { FakeArena } from './arena-fake.js'
-import { AGENT_IDS, TRACKS, type AgentId, type Track } from './events.js'
 import { EventLog } from './log.js'
-import { PhaseClock, sleep } from './phases.js'
+import { DEFAULT_START, RoundRunner, parseStartOptions, type ArenaKind } from './round.js'
 import { startServer } from './server.js'
 
 /**
- * Runs a full round with scripted agents against either arena.
+ * The arena server. Boots idle and waits for the office to start a round.
  *
- *   pnpm dev:fast                            fake, free, instant
- *   ARENA=daytona pnpm --filter arena dev    real sandboxes, still no tokens
+ *   pnpm --filter arena dev                     server only; press Start in the office
+ *   AUTOSTART=1 pnpm --filter arena dev         start a round immediately, as before
+ *   ARENA=fake AUTOSTART=1 pnpm --filter arena dev   same, but free and instant
  *
- * The daytona mode is the important one: it exercises the entire real
- * substrate without spending a single token on the agent loop.
+ * The round itself is scripted, not LLM-driven, so it exercises the whole
+ * Daytona substrate without spending a token. See round.ts.
  */
 
-const REAL = process.env.ARENA === 'daytona'
-
 const runId = new Date().toISOString().replace(/[:.]/g, '-')
+
+/**
+ * One log for the process, not one per round. It is the append-only spine:
+ * SSE clients replay it by Last-Event-ID, so a second round has to continue
+ * the same seq sequence rather than restart it.
+ */
 const log = new EventLog(runId)
-const clock = new PhaseClock()
-const arena: BaseArena = REAL ? new DaytonaArena(log, clock, runId) : new FakeArena(log, clock)
+const runner = new RoundRunner(log)
 
-startServer({ log, state: () => ({ phase: clock.phase(), tracks: arena.snapshot(), run: runId }) })
+startServer({
+  log,
+  state: () => ({ ...runner.status(), run: runId, file: log.file }),
+  start: (body) => {
+    const opts = parseStartOptions(body)
+    if ('error' in opts) return { ok: false, reason: opts.error, status: 400 }
 
-const PICKS: Record<AgentId, Track> = {
-  ada: 'time',
-  rex: 'color',
-  juno: 'time',
-  iris: 'color',
-  otto: 'time',
-  vera: 'color',
-}
-
-const PITCH: Record<AgentId, string> = {
-  ada: 'A timer that is honest about drift.',
-  rex: 'Palettes that argue with each other.',
-  juno: 'One clock, no settings, no options.',
-  iris: 'Colour distance you can actually see.',
-  otto: 'The smallest countdown that works.',
-  vera: 'A clock that only tells you what you need.',
-}
-
-clock.onPhase(async (phase) => {
-  log.emit({ agentId: 'system', kind: 'phase', body: phase })
-  console.log(`[phase] ${phase}`)
-
-  /**
-   * Sandboxes are provisioned lazily at the end of mingle, once tracks are
-   * settled. Nothing is created for an agent that never got going, and the
-   * mingle phase costs no compute.
-   */
-  if (phase === 'build') {
-    arena.assignStragglers(AGENT_IDS)
-    if (arena instanceof DaytonaArena) await arena.provision(AGENT_IDS)
-  }
+    const ack = runner.start(opts)
+    if (ack.ok) console.log(`[start] round ${ack.roundId} arena=${opts.arena} speed=${opts.speed}`)
+    return ack
+  },
 })
 
-async function agentScript(id: AgentId) {
-  await sleep(300 + Math.floor(Math.random() * 900))
+console.log(`[dev] run ${runId} -> ${log.file}`)
 
-  // mingle
-  log.emit({ agentId: id, kind: 'thought', body: `Weighing ${TRACKS.join(' against ')}.` })
-  const want = PICKS[id]
-  const res = arena.claimTrack(id, want)
+if (process.env.AUTOSTART === '1') {
+  const opts = parseStartOptions({
+    arena: (process.env.ARENA as ArenaKind) ?? DEFAULT_START.arena,
+    speed: process.env.ROUND_SPEED ?? DEFAULT_START.speed,
+  })
 
-  if (res.ok) {
-    log.emit({ agentId: id, kind: 'theme', body: want, track: want })
-  } else {
-    const fallback = res.open[0]
-    log.emit({ agentId: id, kind: 'thought', body: `${res.reason}. Taking ${fallback}.` })
-    arena.claimTrack(id, fallback)
-    log.emit({ agentId: id, kind: 'theme', body: fallback, track: fallback })
+  if ('error' in opts) {
+    console.error(`[dev] AUTOSTART rejected: ${opts.error}`)
+    process.exit(1)
   }
 
-  const rival = AGENT_IDS.find((o) => o !== id && PICKS[o] === arena.trackOf(id))
-  if (rival) {
-    log.emit({ agentId: id, kind: 'message', targetId: rival, body: `What angle are you taking?` })
-  }
-
-  // build
-  while (clock.phase() === 'mingle') await sleep(200)
-  if (REAL && !(arena as DaytonaArena).has(id)) {
-    log.emit({ agentId: id, kind: 'thought', body: 'No sandbox. Sitting this round out.' })
-    return
-  }
-
-  const box = arena.sandboxFor(id)
-
-  await box.write('app/index.html', `<!doctype html><title>${id}</title><h1>${id}</h1><p>${PITCH[id]}</p>`)
-  log.emit({ agentId: id, kind: 'build', body: 'wrote app/index.html' })
-
-  /**
-   * nohup plus & is required. Without backgrounding, executeCommand blocks
-   * until the 60s timeout and the agent loses its build phase. FakeArena
-   * ignores this and serves the directory itself.
-   */
-  await box.bash(`cd ~/app && nohup python3 -m http.server 3000 >/tmp/serve.log 2>&1 & sleep 1; echo up`)
-  log.emit({ agentId: id, kind: 'build', body: 'dev server started on 3000' })
-  log.emit({ agentId: id, kind: 'thought', body: 'Serving on 3000. Verifying before I submit.' })
-
-  // submit
-  while (clock.phase() !== 'submit') await sleep(200)
-
-  try {
-    const url = await box.preview(3000)
-    log.emit({ agentId: id, kind: 'submit', body: PITCH[id], track: arena.trackOf(id), previewUrl: url })
-  } catch (err) {
-    log.emit({ agentId: id, kind: 'thought', body: `submission failed: ${(err as Error).message}` })
-  }
+  console.log(`[dev] AUTOSTART arena=${opts.arena} speed=${opts.speed}`)
+  runner.start(opts)
+} else {
+  console.log('[dev] idle. Press Start in the office, or POST /start.')
 }
-
-const main = async () => {
-  console.log(`[dev] run ${runId} arena=${REAL ? 'daytona' : 'fake'} -> ${log.file}`)
-
-  try {
-    await Promise.all([clock.run(), ...AGENT_IDS.map((id) => agentScript(id).catch((err) => {
-      console.error(`[${id}]`, err.message)
-      log.emit({ agentId: id, kind: 'thought', body: `failed: ${err.message}` })
-    }))])
-
-    log.emit({ agentId: 'system', kind: 'score', body: 'round complete' })
-    console.log(`[dev] done. ${log.all().length} events in ${log.file}`)
-  } finally {
-    if (arena instanceof DaytonaArena) await arena.teardown()
-    else await (arena as FakeArena).teardown()
-  }
-
-  console.log(
-    KEEP_ALIVE && REAL
-      ? '[dev] sandboxes kept alive. Preview URLs stay live for the pitch.'
-      : '[dev] server still up for the office. ctrl-c to stop.',
-  )
-}
-
-main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})

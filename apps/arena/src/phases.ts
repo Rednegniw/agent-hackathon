@@ -13,13 +13,28 @@ export const ROUND = {
 /** ROUND_SPEED=10 makes a 14 minute round take 84 seconds. */
 export const SPEED = Math.max(1, Number(process.env.ROUND_SPEED ?? 1))
 
-const scaled = (ms: number) => Math.round(ms / SPEED)
+export interface Step {
+  phase: Phase
+  ms: number
+}
 
-export const SEQUENCE: { phase: Phase; ms: number }[] = [
-  { phase: 'mingle', ms: scaled(ROUND.mingle) },
-  { phase: 'build', ms: scaled(ROUND.build) },
-  { phase: 'submit', ms: scaled(ROUND.submit) },
-]
+/**
+ * Speed is a per-round argument, not just an env var, because rounds are now
+ * started from the office at whatever pace the operator picks. The env var
+ * remains the default so `pnpm dev:fast` behaves exactly as before.
+ */
+export function sequenceAt(speed: number): Step[] {
+  const s = Math.max(1, speed)
+  const scaled = (ms: number) => Math.round(ms / s)
+
+  return [
+    { phase: 'mingle', ms: scaled(ROUND.mingle) },
+    { phase: 'build', ms: scaled(ROUND.build) },
+    { phase: 'submit', ms: scaled(ROUND.submit) },
+  ]
+}
+
+export const SEQUENCE: Step[] = sequenceAt(SPEED)
 
 type Hook = (phase: Phase) => void | Promise<void>
 
@@ -32,9 +47,19 @@ export class PhaseClock {
   #phase: Phase = 'idle'
   #hooks: Hook[] = []
   #stopped = false
+  #sequence: Step[]
+
+  constructor(sequence: Step[] = SEQUENCE) {
+    this.#sequence = sequence
+  }
 
   phase(): Phase {
     return this.#phase
+  }
+
+  /** Total wall-clock length of the round, so the office can show a countdown. */
+  get durationMs(): number {
+    return this.#sequence.reduce((n, s) => n + s.ms, 0)
   }
 
   /** Fires on every transition, including the final 'judged'. */
@@ -62,7 +87,7 @@ export class PhaseClock {
   }
 
   async run() {
-    for (const step of SEQUENCE) {
+    for (const step of this.#sequence) {
       if (this.#stopped) break
       await this.#enter(step.phase)
       await sleep(step.ms)
