@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "arena",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "arena", "dev"],
+      "port": 4000
+    },
+    {
       "name": "office",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "frontend", "dev"],

@@ -6,6 +6,7 @@ import {
   type AgentEvent,
   type AgentId,
   type ArenaStatus,
+  type RoundConfig,
 } from './arena'
 import { ROSTER } from './roster'
 
@@ -212,7 +213,7 @@ export interface Arena {
   error: string | null
   running: boolean
   starting: boolean
-  start: (arena: 'fake' | 'daytona', speed: number) => Promise<void>
+  start: (config: RoundConfig) => Promise<void>
 }
 
 export function useArena(): Arena {
@@ -267,7 +268,7 @@ export function useArena(): Arena {
   }, [refresh])
 
   const start = useCallback(
-    async (arena: 'fake' | 'daytona', speed: number) => {
+    async (config: RoundConfig) => {
       setStarting(true)
       setError(null)
 
@@ -275,7 +276,7 @@ export function useArena(): Arena {
         // Hide the previous round before the new one's events start landing.
         setHideBefore(events.reduce((n, e) => Math.max(n, e.seq), 0))
 
-        const ack = await startRound(arena, speed)
+        const ack = await startRound(config)
         if (!ack.ok) setError(ack.reason)
         await refresh()
       } catch (err) {

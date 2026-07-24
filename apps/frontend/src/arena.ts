@@ -42,11 +42,51 @@ export type StartAck =
   /** 400 means the payload was wrong, 409 that a round is already running. */
   | { ok: false; reason: string; status?: 400 | 409 }
 
-export async function startRound(arena: 'fake' | 'daytona', speed: number): Promise<StartAck> {
+/** How long a whole round lasts, as the lobby offers it. Seconds, like `durations`. */
+export const COMBAT_LENGTHS = [30, 60, 120] as const
+export type CombatLength = (typeof COMBAT_LENGTHS)[number]
+
+/**
+ * Phase splits per combat length. Written out rather than derived from a ratio
+ * because the useful shape is not proportional: mingle needs a floor to be
+ * legible at all, and build is what benefits from the extra time.
+ */
+const SPLITS: Record<CombatLength, { mingle: number; build: number; submit: number }> = {
+  30: { mingle: 4, build: 20, submit: 6 },
+  60: { mingle: 6, build: 42, submit: 12 },
+  120: { mingle: 10, build: 85, submit: 25 },
+}
+
+/** Everything the lobby can set about a round. Mirrors StartBody in round.ts. */
+export interface RoundConfig {
+  arena: 'fake' | 'daytona'
+  agents: 'scripted' | 'real'
+  /**
+   * How many teams the field is split into. Sent, but NOT yet honoured: team
+   * size lives in TEAM_MIN/TEAM_MAX in the arena's teams.ts, which /start does
+   * not read, and round.ts forms no teams at all. The arena ignores unknown
+   * keys, so this is inert until the orchestrator grows a `teams` option.
+   */
+  teams: number
+  /** Seats in the draw, taken from the top of the roster. */
+  agentCount: number
+  length: CombatLength
+  /** Blank falls back to the arena's own default brief. */
+  topic: string
+}
+
+export async function startRound(config: RoundConfig): Promise<StartAck> {
   const res = await fetch(`${ARENA_URL}/start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ arena, speed }),
+    body: JSON.stringify({
+      arena: config.arena,
+      agents: config.agents,
+      agentCount: config.agentCount,
+      teams: config.teams,
+      durations: SPLITS[config.length],
+      topic: config.topic.trim() || undefined,
+    }),
   })
 
   // 409 carries a real reason ("a round is already running"), so parse either way.

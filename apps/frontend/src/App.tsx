@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { AgentId } from './arena'
+import type { AgentId, RoundConfig } from './arena'
 import { CAST } from './roster'
 import { useArena, type Submission } from './useArena'
 import Room from './office/Room'
@@ -24,8 +24,15 @@ export default function App() {
   const { events, derived, status, connected, error, running, starting, start } = useArena()
 
   /** Kept here so Restart can re-run whatever the operator last chose. */
-  const [arena, setArena] = useState<'fake' | 'daytona'>('daytona')
-  const [speed, setSpeed] = useState(25)
+  const [config, setConfig] = useState<RoundConfig>({
+    arena: 'daytona',
+    /** Matches DEFAULT_START: a live round costs money, so it is opted into. */
+    agents: 'scripted',
+    teams: 2,
+    agentCount: 6,
+    length: 60,
+    topic: '',
+  })
 
   const [openAgent, setOpenAgent] = useState<AgentId | null>(null)
   const [expanded, setExpanded] = useState<Submission | null>(null)
@@ -36,6 +43,13 @@ export default function App() {
 
   const phase = status?.phase ?? 'idle'
   const judging = phase === 'judging' || phase === 'judged'
+
+  /**
+   * The lobby and the work happen in the office. The aquarium lounge is where
+   * the round ends up — it is the demo stage, so it appears once there is
+   * something to demo.
+   */
+  const scene = judging ? 'stage' : 'office'
 
   /**
    * Thoughts surface as bubbles for a few seconds. Only the newest three are
@@ -108,7 +122,7 @@ export default function App() {
     seenThought.current.clear()
     seenMessage.current.clear()
     setBubbles({})
-    void start(arena, speed)
+    void start(config)
   }
 
   const tray = (
@@ -129,6 +143,7 @@ export default function App() {
   return (
     <Room
       derived={derived}
+      scene={scene}
       panelInset={panelInset}
       bubbles={bubbles}
       blips={blips}
@@ -142,10 +157,8 @@ export default function App() {
           running={running}
           starting={starting}
           error={error ?? status?.error ?? null}
-          arena={arena}
-          speed={speed}
-          onArena={setArena}
-          onSpeed={setSpeed}
+          config={config}
+          onConfig={setConfig}
           onStart={start}
         />
       )}

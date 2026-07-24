@@ -20,9 +20,12 @@ function useCountdown(startedAt: number | null, durationMs: number | null) {
 
   const left = Math.max(0, startedAt + durationMs - now)
   const total = Math.round(left / 1000)
-  const m = String(Math.floor(total / 60)).padStart(2, '0')
-  const s = String(total % 60).padStart(2, '0')
-  return `${m}:${s}`
+
+  return {
+    /** m:ss, not mm:ss — a leading zero on a phase that never reaches ten minutes reads as noise. */
+    label: `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`,
+    urgent: total <= 10,
+  }
 }
 
 export interface HudProps {
@@ -55,7 +58,9 @@ export default function Hud({ status, connected, derived }: HudProps) {
               : `Round over · ${phase}`}
       </div>
 
-      {clock && <div className="hud-pill clock">{clock} left</div>}
+      {clock && (
+        <div className={`hud-pill clock ${clock.urgent ? 'urgent' : ''}`}>{clock.label}</div>
+      )}
 
       {counts.length > 0 && (
         <div className="hud-pill">
