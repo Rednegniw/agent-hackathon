@@ -8,7 +8,7 @@
 export const AGENT_IDS = ['ada', 'rex', 'juno', 'iris', 'otto', 'vera'] as const
 export type AgentId = (typeof AGENT_IDS)[number]
 
-export type Track = 'time' | 'color'
+export type Track = 'alpha' | 'beta'
 export type Phase = 'idle' | 'mingle' | 'build' | 'submit' | 'judged'
 
 export type EventKind = 'thought' | 'message' | 'build' | 'theme' | 'submit' | 'phase' | 'score'

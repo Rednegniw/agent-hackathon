@@ -7,12 +7,18 @@
 export const AGENT_IDS = ['ada', 'rex', 'juno', 'iris', 'otto', 'vera'] as const
 export type AgentId = (typeof AGENT_IDS)[number]
 
-export const TRACKS = ['time', 'color'] as const
+/**
+ * Two lanes, deliberately named for nothing. The brief lives in TOPIC
+ * (see topic.ts) and is the same for both by default, so a track is a heat
+ * rather than a category. Naming them after subjects was a mistake: the
+ * moment the brief changed, the names lied.
+ */
+export const TRACKS = ['alpha', 'beta'] as const
 export type Track = (typeof TRACKS)[number]
 
 export const TRACK_CAPACITY = 3
 
-export type Phase = 'idle' | 'mingle' | 'build' | 'submit' | 'judged'
+export type Phase = 'idle' | 'mingle' | 'build' | 'submit' | 'judging' | 'judged'
 
 export type EventKind =
   | 'thought' // agent reasoning, streamed from the assistant turn
@@ -20,8 +26,11 @@ export type EventKind =
   | 'build' // a command ran or a file was written
   | 'theme' // agent claimed a track
   | 'submit' // agent shipped, carries previewUrl
+  | 'present' // agent's case to the judges, argued from its own trace
+  | 'verdict' // one juror's score for one agent
+  | 'score' // aggregate rank, or a round-level note from 'system'
+  | 'crown' // the winner
   | 'phase' // round advanced, agentId is 'system'
-  | 'score' // judging result, agentId is 'system' for round-level notes
 
 /** The single event type. Everything the office renders is one of these. */
 export interface AgentEvent {

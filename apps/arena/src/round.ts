@@ -36,12 +36,12 @@ const helloPage = (id: AgentId) =>
 <p>from ${id}</p>`
 
 const PICKS: Record<AgentId, Track> = {
-  ada: 'time',
-  rex: 'color',
-  juno: 'time',
-  iris: 'color',
-  otto: 'time',
-  vera: 'color',
+  ada: 'alpha',
+  rex: 'beta',
+  juno: 'alpha',
+  iris: 'beta',
+  otto: 'alpha',
+  vera: 'beta',
 }
 
 export interface StartOptions {

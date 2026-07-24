@@ -8,11 +8,13 @@
     "dev:fast": "ROUND_SPEED=40 tsx src/dev.ts",
     "typecheck": "tsc --noEmit",
     "smoke": "node smoke.mjs",
-    "cleanup": "tsx src/cleanup.ts"
+    "cleanup": "tsx src/cleanup.ts",
+    "real": "tsx src/real.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.219",
     "@daytona/sdk": "^0.200.1",
+    "braintrust": "^3.24.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "zod": "^4.4.3"
