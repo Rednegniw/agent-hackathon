@@ -244,7 +244,12 @@ function agentTools(agentId: string, sandbox: Sandbox, bus: EventBus) {
           description: z.string(),
         },
         async ({ port, title, description }) => {
-          const url = await sandbox.getPreviewLink(port)
+          // MUST go through arena.preview(). It signs the URL, polls until the
+          // dev server is actually healthy, and returns a plain string.
+          // Do NOT call sandbox.getPreviewLink() here: that variant returns
+          // 401 without a token header, so the office cannot iframe it, and it
+          // returns an object rather than a string.
+          const url = await arena.sandboxFor(agentId).preview(port)
           bus.emit({ agentId, kind: 'submit', body: title, previewUrl: url })
           return { content: [{ type: 'text', text: `submitted: ${url}` }] }
         },
@@ -405,10 +410,15 @@ try {
 
 ### Preview URLs into the frontend
 
-Use the **signed** preview URL variant. It embeds the auth token in the URL, so
-the office frontend can drop it straight into an `<iframe>` with no header
-plumbing. The standard variant needs a token in a header, which an iframe cannot
-send.
+Use `getSignedPreviewUrl(port, expiresInSeconds)`. It is a **separate method**
+from `getPreviewLink(port)`, not a flag on it. The signed URL carries its own
+token, so the office can drop it straight into an `<iframe>`. `getPreviewLink`
+returns 401 without a token header, which an iframe cannot send.
+
+Verified empirically: the signed URL returns 200 with no headers at all and
+sends no `X-Frame-Options` and no CSP, so framing is safe. See
+[ARENA.md](ARENA.md) for the measured facts and the lifecycle constraints, which
+supersede anything in this file.
 
 Sandboxes have isolated network stacks. **Do not attempt sandbox-to-sandbox
 networking** for agent messaging - it goes through the orchestrator.

@@ -75,36 +75,67 @@ export interface Arena {
 `AgentEvent` is defined in SPEC.md and is the shared type. Put it in
 `src/events.ts` and let both lanes import from there.
 
+**One fix to it before anyone imports it:** SPEC.md makes `agentId` required, but
+`phase` and `score` events have no agent. Widen it to
+`agentId: AgentId | 'system'`. Do this first; changing a type both lanes have
+already imported is exactly the kind of 13:30 merge conflict we cannot afford.
+
 ---
 
 ## Sandbox lifecycle
 
 Create lazily at the end of mingle, one per agent that claimed a track.
 
+### The lifecycle trap, and it will cost us the demo if ignored
+
+Three independent timers all destroy the thing we pitch, and the defaults are
+worse than they look. From `Daytona.d.ts:122,125,131`:
+
+- **`autoStopInterval` is in MINUTES, not seconds**, and **defaults to 15**.
+- **`ephemeral: true` forces `autoDeleteInterval = 0`**, which means "delete
+  immediately upon stopping". Ephemeral plus auto-stop equals gone, not paused.
+- **Signed URLs default to 60 seconds** (`Sandbox.d.ts:559`). Passing an explicit
+  expiry is load-bearing.
+
+The schedule in PLAN.md is a full run around 14:00 and a stage pitch at 16:00,
+and slide 4 promises the winning preview URLs live. With the defaults, those
+sandboxes are deleted by roughly 14:20 and the iframe shows a 404 in front of the
+room. You cannot re-sign a URL for a deleted sandbox, so "just call `preview()`
+again" is not a recovery path.
+
+**The rule: the run we pitch from is a keep-alive run.**
+
 ```ts
+const KEEP = process.env.KEEP_ALIVE === '1'
+
 const sandbox = await daytona.create({
   labels: { round: roundId, agent: agentId },
-  ephemeral: true,
-  autoStopInterval: 30,
+  ephemeral: !KEEP,                    // ephemeral deletes on stop
+  autoStopInterval: KEEP ? 0 : 30,     // MINUTES. 0 disables auto-stop.
 })
 ```
-
-`labels` make sandboxes findable in the dashboard while demoing, which is worth
-doing because a judge may ask to see them. `ephemeral` plus `autoStopInterval`
-bound the blast radius in time; do not rely on them as the only cleanup.
-
-Teardown is unconditional:
 
 ```ts
 try {
   await runRound()
 } finally {
-  await Promise.allSettled([...pool.values()].map((s) => s.delete()))
+  if (!KEEP) {
+    await Promise.allSettled([...pool.values()].map((s) => s.delete()))
+  } else {
+    console.log('KEEP_ALIVE: sandboxes left running. Clean up by label later.')
+  }
 }
 ```
 
 `Promise.allSettled`, never `Promise.all`. One failed delete must not orphan the
-other five. Log failures and move on.
+other five. Log failures and move on. Sandboxes kept alive are findable and
+deletable afterwards by the `round` label, so this leaks nothing permanently.
+
+**Backstage before the pitch:** re-mint the signed URLs for the winners. It is
+one `preview()` call each and it removes every expiry question.
+
+`labels` make sandboxes findable in the dashboard while demoing, which is worth
+doing because a judge may ask to see them.
 
 **Do not** pass a `snapshot` name until a snapshot actually exists. A bad
 snapshot name fails at create time, which is the worst place to discover it.
@@ -112,19 +143,26 @@ snapshot name fails at create time, which is the worst place to discover it.
 ### `bash`
 
 ```ts
+const CAP = 2000
+
 async bash(command) {
-  const res = await this.sandbox.process.executeCommand(command)
-  const out = res.result ?? ''
-  if (res.exitCode !== 0) {
-    throw new Error(`exit ${res.exitCode}: ${out.slice(0, 2000)}`)
-  }
+  // Signature is (command, cwd?, env?, timeout?) and timeout is SECONDS.
+  // It is the FOURTH positional. The SDK's own JSDoc example gets this wrong
+  // (Process.d.ts:65 passes it third, where it lands in `env` and is silently
+  // dropped). Always pass the two undefineds.
+  const res = await this.sandbox.process.executeCommand(command, undefined, undefined, 60)
+  const out = (res.result ?? '').slice(0, CAP)
+  if (res.exitCode !== 0) throw new Error(`exit ${res.exitCode}: ${out}`)
   return out
 }
 ```
 
-Throw on non-zero so the tool layer can surface it to the agent as an
-`isError` result. Truncate: an agent that runs `npm install` and gets 40KB of
-output back has burned its context for nothing.
+Throw on non-zero so the tool layer can surface it to the agent as an `isError`
+result. Truncate **both** paths: an agent that runs `npm install` and gets 40KB
+back has burned its context for nothing, and tokens are the binding constraint.
+
+Without the timeout, an agent that starts a foreground server wedges that call
+for the rest of the build phase. They will do this.
 
 Backgrounding a long-running server works and is verified:
 
@@ -157,11 +195,14 @@ async preview(port: number): Promise<string> {
   let lastStatus = 0
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(url, { redirect: 'follow' })
+      // Per-attempt timeout is essential. Without it a proxy that accepts the
+      // connection and then stalls parks this call far past the 10s deadline,
+      // because the deadline is only checked between attempts.
+      const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(2000) })
       lastStatus = res.status
       if (res.ok) return url
     } catch {
-      // connection refused while the dev server is still booting
+      // connection refused or timed out while the dev server is still booting
     }
     await sleep(500)
   }
@@ -191,8 +232,14 @@ class EventLog {
   emit(partial: Omit<AgentEvent, 'seq' | 'ts'>): AgentEvent {
     const e = { ...partial, seq: ++this.#seq, ts: Date.now() }
     this.#events.push(e)
-    appendFileSync('events.jsonl', JSON.stringify(e) + '\n')
-    for (const fn of this.#subs) fn(e)
+    appendFileSync(this.#file, JSON.stringify(e) + '\n')
+    // A throwing subscriber must not propagate. emit() is called from inside
+    // agent tool handlers, so one bad callback (a TTS hook, a write to a
+    // just-closed SSE response) would blow up the agent's turn and starve
+    // every later subscriber.
+    for (const fn of this.#subs) {
+      try { fn(e) } catch (err) { console.error('subscriber threw:', err) }
+    }
     return e
   }
 
@@ -202,10 +249,16 @@ class EventLog {
 ```
 
 `appendFileSync` deliberately. Async writes can interleave and corrupt the file,
-and the whole value of `events.jsonl` is that it is a trustworthy replay source.
-At our event volume the sync cost is irrelevant.
+and the whole value of the log is that it is a trustworthy replay source. At our
+event volume the sync cost is irrelevant.
 
-**`events.jsonl` is the demo insurance.** Do not gitignore it; commit a good run.
+**One file per round: `events-${roundId}.jsonl`, resolved against a fixed dir,
+not cwd.** `#seq` restarts at 1 in every process, so appending every run to one
+shared file interleaves duplicate seq numbers and silently destroys the exact
+artifact the demo falls back on.
+
+**The chosen run's file is the demo insurance.** Do not gitignore it; commit the
+good one.
 
 ---
 
@@ -238,7 +291,12 @@ Pure logic, no I/O, so unit-test it directly.
 
 ```ts
 claimTrack(agentId, track) {
-  if (this.#tracks.get(agentId)) return { ok: true }        // idempotent
+  const existing = this.#tracks.get(agentId)
+  // Idempotent only for the SAME track. Returning ok for a different track
+  // would let the tool emit a `theme` event that disagrees with trackOf(),
+  // so the office and the per-track judge would rank the entry under the
+  // wrong brief. A model will absolutely call this twice.
+  if (existing) return existing === track ? { ok: true } : { ok: false, open: this.#open() }
   const taken = [...this.#tracks.values()].filter((t) => t === track).length
   if (taken >= 3) {
     const open = (['time', 'color'] as Track[]).filter(
@@ -266,9 +324,17 @@ app.get('/events', (req, res) => {
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
+    'Access-Control-Allow-Origin': '*',   // Kris's office runs on another origin
   })
-  for (const e of log.all()) res.write(`data: ${JSON.stringify(e)}\n\n`)
-  const off = log.subscribe((e) => res.write(`data: ${JSON.stringify(e)}\n\n`))
+
+  // EventSource auto-reconnects after any blip and sends Last-Event-ID.
+  // Without honouring it, every reconnect replays the whole log and the
+  // office double-renders the round.
+  const since = Number(req.headers['last-event-id'] ?? 0)
+  const send = (e) => res.write(`id: ${e.seq}\ndata: ${JSON.stringify(e)}\n\n`)
+
+  for (const e of log.all()) if (e.seq > since) send(e)
+  const off = log.subscribe(send)
   const hb = setInterval(() => res.write(': hb\n\n'), 15_000)
   req.on('close', () => { off(); clearInterval(hb) })
 })
@@ -276,6 +342,10 @@ app.get('/events', (req, res) => {
 
 **Replay-then-tail on connect.** This is what lets Kris refresh mid-demo without
 losing the room. Without it a reload shows an empty office.
+
+`id:` on every frame plus the `Last-Event-ID` check makes reconnects idempotent.
+The office should still dedupe by `seq` as a belt-and-braces measure; say so to
+Kris, since it is a two-line guard on his side.
 
 The heartbeat comment keeps proxies from closing an idle stream. Always clean up
 both the subscription and the interval on `close` or a long session leaks.
@@ -303,7 +373,6 @@ Never debug the full run. Each rung isolates one failure domain.
 
 | Rung | Command | Costs | Proves |
 |------|---------|-------|--------|
-| 0 | `npm test` | nothing | Phase clock and track claiming, as pure unit tests |
 | 1 | `npm run smoke` | a few cents | The whole Daytona path: create, write, serve, sign, fetch, delete. **Already written and passing.** |
 | 2 | `ARENA=fake npm run dev` | nothing | Arena plus agent loop plus office, no Daytona, no tokens |
 | 3 | one real agent, `ROUND_SPEED=4` | some tokens | A model can actually drive the tools |
@@ -312,6 +381,15 @@ Never debug the full run. Each rung isolates one failure domain.
 
 `smoke.mjs` is committed and green. Re-run it any time Daytona misbehaves; it
 tells you in thirty seconds whether the problem is us or them.
+
+Unit tests for the phase clock and track claiming were in an earlier draft and
+are **cut**. The logic is thirty lines and rungs 1 and 2 exercise both. With the
+time left, a test runner is setup cost we do not get back.
+
+**Toolchain does not exist yet.** `package.json` has only `@daytonaio/sdk` and
+`dotenv`. Before any of this is runnable: a TS runner (`tsx`), a server for the
+SSE route, and the agent SDK plus `zod` for Patrik's lane. Do that install once,
+first, rather than discovering it three times.
 
 ---
 
@@ -341,4 +419,5 @@ events.jsonl       demo insurance, commit a good run
 | Agent leaves a blocking foreground process | `executeCommand` has a `timeout` param. Pass one, roughly 60s, so a wedged command cannot eat the build phase. |
 | Huge command output | Truncate to ~2KB before returning to the agent. |
 | Sandbox delete fails on teardown | `allSettled`, log it, and clean up in the Daytona dashboard by the `round` label afterwards. |
-| Signed URL expired before the pitch | Regenerate before going on stage. Cheap; just call `preview()` again. |
+| Signed URL expired before the pitch | Re-mint with `preview()`. **Only works if the sandbox still exists**, which is what `KEEP_ALIVE` is for. Against a deleted sandbox there is no recovery, so fall back to replay. |
+| Sandbox gone before the pitch | You forgot `KEEP_ALIVE=1`. Pitch from the replay log instead and say the run was recorded. Do not improvise a live re-run on stage. |
