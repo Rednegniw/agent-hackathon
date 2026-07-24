@@ -1,199 +1,203 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ARENA_URL, fetchStatus, startRound, type AgentEvent, type ArenaStatus } from './arena'
-
-const PHASES = ['mingle', 'build', 'submit', 'judged'] as const
+import { useEffect, useRef, useState } from 'react'
+import type { AgentId } from './arena'
+import { CAST } from './roster'
+import { useArena, type Submission } from './useArena'
+import Room from './office/Room'
+import Hud from './office/Hud'
+import Preview from './panels/Preview'
+import ProfileSheet from './panels/ProfileSheet'
+import SubmissionPanel from './panels/SubmissionPanel'
+import OperatorPanel from './panels/OperatorPanel'
+import { CrownBanner, ResultsModal, VerdictColumn } from './panels/Judging'
 
 /**
- * Live view over the arena's event stream, plus the control that starts a
- * round. This is a functional control surface, not the pixel office — it
- * renders the same append-only log the office will, so both can coexist.
+ * The office. One room, and whatever the round's phase floats over it:
+ * the lobby before it starts, the submission panel while judging, the
+ * results modal and the crown at the end.
  */
-export default function App() {
-  const [events, setEvents] = useState<AgentEvent[]>([])
-  const [status, setStatus] = useState<ArenaStatus | null>(null)
-  const [connected, setConnected] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [starting, setStarting] = useState(false)
 
+const BUBBLE_MS = 6000
+const MAX_BUBBLES = 3
+const BLIP_MS = 1400
+
+export default function App() {
+  const { events, derived, status, connected, error, running, starting, start } = useArena()
+
+  /** Kept here so Restart can re-run whatever the operator last chose. */
   const [arena, setArena] = useState<'fake' | 'daytona'>('daytona')
   const [speed, setSpeed] = useState(25)
 
+  const [openAgent, setOpenAgent] = useState<AgentId | null>(null)
+  const [expanded, setExpanded] = useState<Submission | null>(null)
+  const [subIndex, setSubIndex] = useState(0)
+  const [showResults, setShowResults] = useState(false)
+  const [bubbles, setBubbles] = useState<Partial<Record<AgentId, string>>>({})
+  const [blips, setBlips] = useState<Partial<Record<AgentId, boolean>>>({})
+
+  const phase = status?.phase ?? 'idle'
+  const judging = phase === 'judging' || phase === 'judged'
+
   /**
-   * Events at or below this seq belong to a previous round. The log is
-   * append-only and the server replays it on connect, so the office hides the
-   * backlog rather than asking the arena to forget it.
+   * Thoughts surface as bubbles for a few seconds. Only the newest three are
+   * ever on screen — a queue would land stale thoughts late, which reads worse
+   * than dropping them.
    */
-  const [hideBefore, setHideBefore] = useState(0)
-
-  // ---- event stream ----
-  useEffect(() => {
-    const source = new EventSource(`${ARENA_URL}/events`)
-
-    source.onopen = () => {
-      setConnected(true)
-      setError(null)
-    }
-
-    source.onmessage = (msg) => {
-      const e = JSON.parse(msg.data) as AgentEvent
-
-      // Dedupe by seq: a reconnect replays from Last-Event-ID and can overlap.
-      setEvents((prev) => (prev.some((p) => p.seq === e.seq) ? prev : [...prev, e]))
-    }
-
-    source.onerror = () => {
-      setConnected(false)
-      setError(`cannot reach the arena at ${ARENA_URL} — is it running?`)
-    }
-
-    return () => source.close()
-  }, [])
-
-  // ---- status ----
-  const refresh = useCallback(async () => {
-    try {
-      setStatus(await fetchStatus())
-    } catch {
-      // The SSE error path already reports an unreachable arena.
-    }
-  }, [])
+  const seenThought = useRef(new Set<number>())
 
   useEffect(() => {
-    void refresh()
-    const id = setInterval(refresh, 1000)
-    return () => clearInterval(id)
-  }, [refresh])
+    for (const [id, thought] of Object.entries(derived.thoughts)) {
+      if (!thought || seenThought.current.has(thought.seq)) continue
+      seenThought.current.add(thought.seq)
 
-  const running = status?.state === 'running'
+      const agentId = id as AgentId
+      const body = thought.body.length > 140 ? `${thought.body.slice(0, 138)}…` : thought.body
 
-  const onStart = async () => {
-    setStarting(true)
-    setError(null)
+      setBubbles((prev) => {
+        const next = { ...prev, [agentId]: body }
+        const keys = Object.keys(next) as AgentId[]
+        if (keys.length > MAX_BUBBLES) delete next[keys[0]]
+        return next
+      })
 
-    try {
-      // Hide the previous round before the new one's events start landing.
-      setHideBefore(events.reduce((n, e) => Math.max(n, e.seq), 0))
-
-      const ack = await startRound(arena, speed)
-      if (!ack.ok) setError(ack.reason)
-      await refresh()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setStarting(false)
+      setTimeout(() => setBubbles((prev) => {
+        if (prev[agentId] !== body) return prev
+        const next = { ...prev }
+        delete next[agentId]
+        return next
+      }), BUBBLE_MS)
     }
+  }, [derived.thoughts])
+
+  /** A message is a blip over the sender; the text itself lives in Traces. */
+  const seenMessage = useRef(new Set<number>())
+
+  useEffect(() => {
+    for (const m of derived.messages) {
+      if (seenMessage.current.has(m.seq) || m.agentId === 'system') continue
+      seenMessage.current.add(m.seq)
+
+      const agentId = m.agentId
+      setBlips((prev) => ({ ...prev, [agentId]: true }))
+      setTimeout(() => setBlips((prev) => ({ ...prev, [agentId]: false })), BLIP_MS)
+    }
+  }, [derived.messages])
+
+  /** While judging, the panel follows whoever is presenting. */
+  useEffect(() => {
+    if (!derived.presenting) return
+    const i = derived.submissions.findIndex((s) => s.agentId === derived.presenting)
+    if (i >= 0) setSubIndex(i)
+  }, [derived.presenting, derived.submissions])
+
+  /**
+   * The crown banner is the automatic beat — it keeps the room visible, which
+   * is the whole point of the scrimless treatment. The modal is a decision
+   * surface and stays shut until the operator asks for it.
+   */
+
+  const panelOpen = judging && derived.submissions.length > 0
+  const panelInset = openAgent ? 404 : 0
+
+  const hud = <Hud status={status} connected={connected} derived={derived} />
+
+  const restart = () => {
+    setShowResults(false)
+    setOpenAgent(null)
+    setExpanded(null)
+    setSubIndex(0)
+    seenThought.current.clear()
+    seenMessage.current.clear()
+    setBubbles({})
+    void start(arena, speed)
   }
 
-  const visible = useMemo(() => events.filter((e) => e.seq > hideBefore), [events, hideBefore])
-  const submissions = useMemo(() => visible.filter((e) => e.kind === 'submit'), [visible])
+  const tray = (
+    <>
+      {derived.ranks.length > 0 && (
+        <button className="btn btn-secondary" onClick={() => setShowResults(true)}>
+          See the results
+        </button>
+      )}
+      {phase !== 'idle' && (
+        <button className="btn btn-primary" onClick={restart} disabled={running || starting}>
+          {running ? 'Running…' : starting ? 'Starting…' : 'Restart round'}
+        </button>
+      )}
+    </>
+  )
 
   return (
-    <div className="app">
-      <header>
-        <div className="title">
-          <h1>arena</h1>
-          <span className={`dot ${connected ? 'on' : 'off'}`} />
-          <span className="muted">{connected ? 'live' : 'offline'}</span>
-        </div>
-
-        <div className="controls">
-          <label>
-            substrate
-            <select
-              value={arena}
-              onChange={(e) => setArena(e.target.value as 'fake' | 'daytona')}
-              disabled={running}
-            >
-              <option value="daytona">daytona (real sandboxes)</option>
-              <option value="fake">fake (local, free)</option>
-            </select>
-          </label>
-
-          <label>
-            speed &times;{speed}
-            <input
-              type="range"
-              min={1}
-              max={60}
-              value={speed}
-              disabled={running}
-              onChange={(e) => setSpeed(Number(e.target.value))}
-            />
-          </label>
-
-          <button className="start" onClick={onStart} disabled={running || starting}>
-            {running ? 'running…' : starting ? 'starting…' : 'Start round'}
-          </button>
-        </div>
-      </header>
-
-      {error && <p className="error">{error}</p>}
-
-      <section className="phases">
-        {PHASES.map((p) => (
-          <span key={p} className={`phase ${status?.phase === p ? 'active' : ''}`}>
-            {p}
-          </span>
-        ))}
-        <span className="muted spacer">
-          {status ? `${status.state}${status.arena ? ` · ${status.arena}` : ''}` : '…'}
-        </span>
-      </section>
-
-      {submissions.length > 0 && (
-        <section className="submissions">
-          <h2>submissions</h2>
-          <ul>
-            {submissions.map((e) => (
-              <li key={e.seq}>
-                <strong>{e.agentId}</strong>
-                <a href={e.previewUrl} target="_blank" rel="noreferrer">
-                  {e.previewUrl}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
+    <Room
+      derived={derived}
+      panelInset={panelInset}
+      bubbles={bubbles}
+      blips={blips}
+      dim={!!derived.winner}
+      onOpenAgent={setOpenAgent}
+      hud={hud}
+      tray={tray}
+    >
+      {phase === 'idle' && !running && (
+        <OperatorPanel
+          running={running}
+          starting={starting}
+          error={error ?? status?.error ?? null}
+          arena={arena}
+          speed={speed}
+          onArena={setArena}
+          onSpeed={setSpeed}
+          onStart={start}
+        />
       )}
 
-      <EventStream events={visible} />
-    </div>
-  )
-}
+      {panelOpen && (
+        <SubmissionPanel
+          derived={derived}
+          index={subIndex}
+          onIndex={setSubIndex}
+          onExpand={setExpanded}
+          onOpenAgent={setOpenAgent}
+        />
+      )}
 
-function EventStream({ events }: { events: AgentEvent[] }) {
-  const endRef = useRef<HTMLDivElement>(null)
+      {judging && derived.presenting && <VerdictColumn derived={derived} />}
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [events.length])
+      {openAgent && (
+        <ProfileSheet agentId={openAgent} events={events} onClose={() => setOpenAgent(null)} />
+      )}
 
-  if (!events.length) {
-    return <p className="empty">No events yet. Press Start round.</p>
-  }
+      {expanded && (
+        <div className="preview-full">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
+            <div>
+              <div className="eyebrow">{expanded.agentId}</div>
+              <h4 className="sheet-title">{expanded.title}</h4>
+            </div>
+            <button className="btn btn-icon btn-secondary" onClick={() => setExpanded(null)} aria-label="Close preview">
+              ✕
+            </button>
+          </div>
 
-  return (
-    <ol className="stream">
-      {events.map((e) => (
-        <li key={e.seq} className={`ev ${e.kind}`}>
-          <span className="seq">{e.seq}</span>
-          <span className="who">{e.agentId}</span>
-          <span className="kind">{e.kind}</span>
-          <span className="body">
-            {e.targetId && <span className="to">→ {e.targetId} </span>}
-            {e.body}
-            {e.previewUrl && (
-              <>
-                {' '}
-                <a href={e.previewUrl} target="_blank" rel="noreferrer">
-                  open
-                </a>
-              </>
-            )}
-          </span>
-        </li>
-      ))}
-      <div ref={endRef} />
-    </ol>
+          <Preview url={expanded.previewUrl} title={`${expanded.agentId}'s app`} full />
+
+          <div className="owner">
+            <div className="plate-art">
+              <img src={CAST[expanded.agentId].avatar} alt="" />
+            </div>
+            <div className="pill-row">
+              <span className="status-pill">{expanded.agentId}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {derived.winner && <CrownBanner derived={derived} />}
+
+      {showResults && derived.ranks.length > 0 && (
+        <ResultsModal derived={derived} onClose={() => setShowResults(false)} />
+      )}
+
+      {error && !running && phase !== 'idle' && <div className="error-pill" style={{ position: 'absolute', bottom: 80, left: 18, zIndex: 1200 }}>{error}</div>}
+    </Room>
   )
 }

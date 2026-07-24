@@ -72,6 +72,9 @@ export interface RoundStatus {
   startedAt: number | null
   finishedAt: number | null
   error: string | null
+  /** Countdown data: when the current phase began and how long it runs. */
+  phaseStartedAt: number | null
+  phaseDurationMs: number | null
 }
 
 /**
@@ -103,6 +106,8 @@ export class RoundRunner {
       startedAt: this.#startedAt,
       finishedAt: this.#finishedAt,
       error: this.#error,
+      phaseStartedAt: this.#clock?.phaseStartedAt ?? null,
+      phaseDurationMs: this.#clock?.phaseDurationMs ?? null,
     }
   }
 
@@ -125,8 +130,19 @@ export class RoundRunner {
     this.#finishedAt = null
     this.#error = null
 
-    // Deliberately not awaited: the HTTP response must not wait out the round.
-    void this.#run(roundId, opts)
+    /**
+     * Deliberately not awaited: the HTTP response must not wait out the round.
+     * The catch is load-bearing — anything that throws before #run's own try
+     * block (a missing DAYTONA_API_KEY, for one) would otherwise surface as an
+     * unhandled rejection and take the whole server down with it.
+     */
+    void this.#run(roundId, opts).catch((err: unknown) => {
+      this.#error = err instanceof Error ? err.message : String(err)
+      this.#state = 'failed'
+      this.#finishedAt = Date.now()
+      this.#log.emit({ agentId: 'system', kind: 'score', body: `round failed: ${this.#error}` })
+      console.error(`[round ${roundId}] failed to start:`, this.#error)
+    })
 
     return { ok: true, roundId }
   }

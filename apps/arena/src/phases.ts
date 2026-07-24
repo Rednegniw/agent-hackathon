@@ -48,6 +48,8 @@ export class PhaseClock {
   #hooks: Hook[] = []
   #stopped = false
   #sequence: Step[]
+  #phaseStartedAt: number | null = null
+  #phaseMs: number | null = null
 
   constructor(sequence: Step[] = SEQUENCE) {
     this.#sequence = sequence
@@ -60,6 +62,16 @@ export class PhaseClock {
   /** Total wall-clock length of the round, so the office can show a countdown. */
   get durationMs(): number {
     return this.#sequence.reduce((n, s) => n + s.ms, 0)
+  }
+
+  /** When the current phase began, for the office's countdown pill. */
+  get phaseStartedAt(): number | null {
+    return this.#phaseStartedAt
+  }
+
+  /** How long the current phase runs, or null for untimed phases (idle, judged). */
+  get phaseDurationMs(): number | null {
+    return this.#phaseMs
   }
 
   /** Fires on every transition, including the final 'judged'. */
@@ -90,6 +102,8 @@ export class PhaseClock {
     for (const step of this.#sequence) {
       if (this.#stopped) break
       await this.#enter(step.phase)
+      this.#phaseStartedAt = Date.now()
+      this.#phaseMs = step.ms
       await sleep(step.ms)
     }
 
@@ -104,6 +118,8 @@ export class PhaseClock {
   /** Closes the round once judging has produced a winner. */
   async finish() {
     await this.#enter('judged')
+    this.#phaseStartedAt = Date.now()
+    this.#phaseMs = null
   }
 
   stop() {

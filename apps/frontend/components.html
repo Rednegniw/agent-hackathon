@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Office components</title>
+    <link rel="stylesheet" href="/src/ds/organic.css" />
+    <link rel="stylesheet" href="/src/index.css" />
+    <style>
+      /* Gallery-only chrome. Everything is scoped under .gallery so nothing
+         leaks into the office styles. Tokens only — no ad-hoc hexes. */
+      body.gallery {
+        overflow: auto;
+        height: auto;
+        background: var(--color-bg);
+        padding: var(--space-8);
+      }
+      .gallery main { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-8); }
+      .gallery .g-title { margin: 0; font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 46px; letter-spacing: -0.01em; }
+      .gallery .g-lede { margin: var(--space-1) 0 0; font-size: 13px; color: color-mix(in srgb, var(--color-text) 62%, transparent); }
+      .gallery section { display: flex; flex-direction: column; gap: var(--space-3); }
+      .gallery section > .eyebrow { margin-bottom: 0; }
+      .gallery .g-h { margin: 0; font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 25px; letter-spacing: -0.01em; }
+      .gallery .g-row { display: flex; flex-wrap: wrap; gap: var(--space-6) var(--space-6); align-items: flex-end; }
+      .gallery .g-row.top { align-items: flex-start; }
+      .gallery .g-item { display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; min-width: 0; }
+      .gallery .g-cap {
+        margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+        color: color-mix(in srgb, var(--color-text) 55%, transparent);
+      }
+
+      /* color tokens */
+      .gallery .g-swatch { width: 76px; height: 48px; border-radius: var(--radius-sm); border: 1px solid var(--color-divider); }
+      .gallery .g-ramp { display: flex; gap: 4px; }
+      .gallery .g-ramp i { width: 26px; height: 26px; border-radius: 6px; }
+
+      /* type specimens */
+      .gallery .g-display, .gallery .g-t25, .gallery .g-t20 { margin: 0; font-family: var(--font-heading); font-weight: var(--font-heading-weight); letter-spacing: -0.01em; line-height: 1.12; }
+      .gallery .g-display { font-size: 46px; }
+      .gallery .g-t25 { font-size: 25px; }
+      .gallery .g-t20 { font-size: 20px; }
+      .gallery .g-body15 { margin: 0; font-size: 15px; line-height: 1.55; max-width: 46ch; }
+      .gallery .g-detail13 { margin: 0; font-size: 13px; }
+
+      /* small secondary pill (DESIGN.md §3: 12px text, 6/14 padding) */
+      .gallery .g-btn-sm { font-size: 12px; padding: 6px 14px; }
+
+      /* penguin cells — .penguin is position:absolute in the office; here each
+         one sits in a relatively-positioned cell instead */
+      .gallery .penguin { position: relative; left: auto; top: auto; }
+      .gallery .g-pcell { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); width: 108px; padding-top: 6px; }
+      .gallery .g-pcell.tall { padding-top: 72px; }
+      .gallery .blip { animation-iteration-count: infinite; }
+
+      /* sheet + panel shells — absolutely-positioned overlays in the office,
+         presented here inside fixed-height relative demo boxes */
+      .gallery .g-shell { position: relative; height: 380px; flex: none; }
+      .gallery .g-shell .sheet { position: relative; inset: auto; height: 100%; max-width: 100%; }
+      .gallery .g-shell .panel { position: relative; inset: auto; height: 100%; max-height: none; max-width: 100%; }
+
+      /* crown banner — chrome-less overlay in the office, demoed on a dark room box */
+      .gallery .g-room { position: relative; height: 240px; border-radius: var(--radius-lg); background: var(--color-room); overflow: hidden; }
+      .gallery .g-room .crown-banner { bottom: 48px; }
+
+      /* misc demo sizing */
+      .gallery .g-w360 { width: 360px; max-width: 100%; }
+      .gallery .g-w420 { width: 420px; max-width: 100%; }
+      .gallery .g-w300 { width: 300px; max-width: 100%; }
+      .gallery .setup-card .field-label { margin-bottom: 6px; }
+    </style>
+  </head>
+  <body class="gallery">
+    <main>
+      <header>
+        <div class="eyebrow">Design system</div>
+        <h1 class="g-title">Office components</h1>
+        <p class="g-lede">Every class the office uses, on the Organic DS — src/ds/organic.css + src/index.css.</p>
+      </header>
+
+      <!-- ═══ Color tokens ═══ -->
+      <section>
+        <div class="eyebrow">Foundations</div>
+        <h2 class="g-h">Color tokens</h2>
+        <div class="g-row top">
+          <div class="g-item"><div class="g-swatch" style="background: var(--color-bg)"></div><p class="g-cap">bg</p></div>
+          <div class="g-item"><div class="g-swatch" style="background: var(--color-surface)"></div><p class="g-cap">surface</p></div>
+          <div class="g-item"><div class="g-swatch" style="background: var(--color-text)"></div><p class="g-cap">text</p></div>
+          <div class="g-item"><div class="g-swatch" style="background: var(--color-accent)"></div><p class="g-cap">accent</p></div>
+          <div class="g-item"><div class="g-swatch" style="background: var(--color-accent-2)"></div><p class="g-cap">accent-2</p></div>
+          <div class="g-item"><div class="g-swatch" style="background: var(--color-divider)"></div><p class="g-cap">divider</p></div>
+        </div>
+        <div class="g-row top">
+          <div class="g-item">
+            <div class="g-ramp">
+              <i style="background: var(--color-neutral-100)"></i><i style="background: var(--color-neutral-200)"></i><i style="background: var(--color-neutral-300)"></i><i style="background: var(--color-neutral-400)"></i><i style="background: var(--color-neutral-500)"></i><i style="background: var(--color-neutral-600)"></i><i style="background: var(--color-neutral-700)"></i><i style="background: var(--color-neutral-800)"></i><i style="background: var(--color-neutral-900)"></i>
+            </div>
+            <p class="g-cap">neutral 100–900</p>
+          </div>
+          <div class="g-item">
+            <div class="g-ramp">
+              <i style="background: var(--color-accent-100)"></i><i style="background: var(--color-accent-200)"></i><i style="background: var(--color-accent-300)"></i><i style="background: var(--color-accent-400)"></i><i style="background: var(--color-accent-500)"></i><i style="background: var(--color-accent-600)"></i><i style="background: var(--color-accent-700)"></i><i style="background: var(--color-accent-800)"></i><i style="background: var(--color-accent-900)"></i>
+            </div>
+            <p class="g-cap">accent 100–900</p>
+          </div>
+          <div class="g-item">
+            <div class="g-ramp">
+              <i style="background: var(--color-accent-2-100)"></i><i style="background: var(--color-accent-2-200)"></i><i style="background: var(--color-accent-2-300)"></i><i style="background: var(--color-accent-2-400)"></i><i style="background: var(--color-accent-2-500)"></i><i style="background: var(--color-accent-2-600)"></i><i style="background: var(--color-accent-2-700)"></i><i style="background: var(--color-accent-2-800)"></i><i style="background: var(--color-accent-2-900)"></i>
+            </div>
+            <p class="g-cap">accent-2 100–900</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ Type scale ═══ -->
+      <section>
+        <div class="eyebrow">Foundations</div>
+        <h2 class="g-h">Type scale</h2>
+        <div class="g-row top">
+          <div class="g-item"><p class="g-display">Round three</p><p class="g-cap">Display 46 · Newsreader 500</p></div>
+          <div class="g-item"><p class="g-t25">Juno takes it by four</p><p class="g-cap">Title 25 · Newsreader</p></div>
+          <div class="g-item"><p class="g-t20">Mika's take</p><p class="g-cap">Sheet title 20 · Newsreader</p></div>
+        </div>
+        <div class="g-row top">
+          <div class="g-item"><p class="g-body15">Body copy runs Figtree at 15px with a 1.55 line height — anything you read, never the display face.</p><p class="g-cap">Body 15 · Figtree</p></div>
+          <div class="g-item"><p class="g-detail13">3 agents ready · 2 min rounds</p><p class="g-cap">Detail 13</p></div>
+          <div class="g-item"><div class="eyebrow" style="margin-bottom: 0">Entry 2 of 3</div><p class="g-cap">Eyebrow 11 · 700 · 0.09em</p></div>
+        </div>
+      </section>
+
+      <!-- ═══ Buttons ═══ -->
+      <section>
+        <div class="eyebrow">Controls</div>
+        <h2 class="g-h">Buttons</h2>
+        <div class="g-row">
+          <div class="g-item"><button class="btn btn-primary">Start the battle</button><p class="g-cap">btn-primary</p></div>
+          <div class="g-item"><button class="btn btn-secondary">Cancel</button><p class="g-cap">btn-secondary</p></div>
+          <div class="g-item"><button class="btn btn-ghost">Open in new tab</button><p class="g-cap">btn-ghost</p></div>
+          <div class="g-item"><button class="btn btn-secondary btn-icon" aria-label="Close">✕</button><p class="g-cap">btn-icon</p></div>
+          <div class="g-item"><button class="btn btn-primary" disabled>Start the battle</button><p class="g-cap">disabled</p></div>
+          <div class="g-item"><button class="btn btn-secondary g-btn-sm">Surprise me</button><p class="g-cap">small pill</p></div>
+          <div class="g-item">
+            <div class="emoji-tray">
+              <button class="btn btn-icon" aria-label="Fire">🔥</button>
+              <button class="btn btn-icon" aria-label="Clap">👏</button>
+              <button class="btn btn-icon" aria-label="Skull">💀</button>
+              <button class="btn btn-icon" aria-label="Mind blown">🤯</button>
+            </div>
+            <p class="g-cap">emoji-tray</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ Tags ═══ -->
+      <section>
+        <div class="eyebrow">Controls</div>
+        <h2 class="g-h">Tags</h2>
+        <div class="g-row">
+          <div class="g-item"><span class="tag tag-accent">bold</span><p class="g-cap">tag-accent</p></div>
+          <div class="g-item"><span class="tag tag-accent-2">on brief</span><p class="g-cap">tag-accent-2</p></div>
+          <div class="g-item"><span class="tag tag-neutral">fast</span><p class="g-cap">tag-neutral</p></div>
+          <div class="g-item"><span class="tag tag-outline">experimental</span><p class="g-cap">tag-outline</p></div>
+          <div class="g-item">
+            <div class="tag-row">
+              <span class="tag tag-accent">bold</span>
+              <span class="tag tag-accent-2">on brief</span>
+              <span class="tag tag-neutral">fast</span>
+              <span class="tag tag-outline">experimental</span>
+            </div>
+            <p class="g-cap">tag-row</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ HUD pills ═══ -->
+      <section>
+        <div class="eyebrow">Overlay chrome</div>
+        <h2 class="g-h">HUD pills</h2>
+        <div class="g-row">
+          <div class="g-item"><div class="hud-pill"><span class="dot"></span>Round 1 · Live</div><p class="g-cap">hud-pill + dot</p></div>
+          <div class="g-item"><div class="hud-pill clock">01:48 left</div><p class="g-cap">hud-pill.clock</p></div>
+          <div class="g-item"><div class="hud-pill quiet">Brief: a landing page for a tiny bakery</div><p class="g-cap">hud-pill.quiet</p></div>
+          <div class="g-item"><div class="hud-pill"><span class="dot off"></span>Offline</div><p class="g-cap">dot.off</p></div>
+          <div class="g-item">
+            <div class="hud-pill">
+              <span class="team-count"><span class="pill-dot team-a"></span>3</span>
+              <span class="team-count"><span class="pill-dot team-b"></span>2</span>
+            </div>
+            <p class="g-cap">team-count · a / b</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ Penguin avatars ═══ -->
+      <section>
+        <div class="eyebrow">Room</div>
+        <h2 class="g-h">Penguin avatars</h2>
+        <div class="g-row top">
+          <div class="g-pcell">
+            <div class="penguin">
+              <div class="penguin-plate"><div class="plate-art"><img src="/avatars/teal-beanie.png" alt="juno" /></div></div>
+              <div class="pill-row"><span class="status-pill">juno</span></div>
+            </div>
+            <p class="g-cap">default · idle pill</p>
+          </div>
+          <div class="g-pcell">
+            <div class="penguin" data-ring="a">
+              <div class="penguin-plate"><div class="plate-art"><img src="/avatars/punk-pastel.png" alt="mika" /></div></div>
+              <div class="pill-row"><span class="status-pill live">Thinking</span></div>
+            </div>
+            <p class="g-cap">ring team a · live</p>
+          </div>
+          <div class="g-pcell">
+            <div class="penguin" data-ring="b">
+              <div class="penguin-plate"><div class="plate-art"><img src="/avatars/goggles-beanie.png" alt="otto" /></div></div>
+              <div class="pill-row"><span class="status-pill live">Working</span></div>
+            </div>
+            <p class="g-cap">ring team b · live</p>
+          </div>
+          <div class="g-pcell">
+            <div class="penguin presenting">
+              <div class="penguin-plate"><div class="plate-art"><img src="/avatars/scarf-mohawk.png" alt="vera" /></div></div>
+              <div class="pill-row"><span class="status-pill">Presenting</span></div>
+            </div>
+            <p class="g-cap">presenting</p>
+          </div>
+          <div class="g-pcell">
+            <div class="penguin winner">
+              <div class="penguin-plate">
+                <div class="plate-art"><img src="/avatars/mint-beanie.png" alt="pip" /></div>
+                <div class="trophy">🏆</div>
+              </div>
+              <div class="pill-row"><span class="status-pill"><span class="pill-dot shipped"></span>pip</span></div>
+            </div>
+            <p class="g-cap">winner + trophy · shipped</p>
+          </div>
+          <div class="g-pcell">
+            <div class="penguin out">
+              <div class="penguin-plate"><div class="plate-art"><img src="/avatars/bandana-fish.png" alt="remy" /></div></div>
+              <div class="pill-row"><span class="status-pill">remy</span></div>
+            </div>
+            <p class="g-cap">out</p>
+          </div>
+          <div class="g-pcell">
+            <div class="penguin dimmed">
+              <div class="penguin-plate"><div class="plate-art"><img src="/avatars/sleepy-mint.png" alt="sol" /></div></div>
+              <div class="pill-row"><span class="status-pill">sol</span></div>
+            </div>
+            <p class="g-cap">dimmed</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ Bubbles ═══ -->
+      <section>
+        <div class="eyebrow">Room</div>
+        <h2 class="g-h">Bubbles</h2>
+        <div class="g-row top">
+          <div class="g-pcell tall">
+            <div class="penguin">
+              <div class="bubble">Weighing the two lanes…</div>
+              <div class="penguin-plate"><div class="plate-art"><img src="/avatars/beanie-classic.png" alt="ada" /></div></div>
+              <div class="pill-row"><span class="status-pill">ada</span></div>
+            </div>
+            <p class="g-cap">bubble · thought</p>
+          </div>
+          <div class="g-pcell tall">
+            <div class="penguin">
+              <div class="blip">✉</div>
+              <div class="penguin-plate"><div class="plate-art"><img src="/avatars/aviator-lilac.png" alt="kit" /></div></div>
+              <div class="pill-row"><span class="status-pill">kit</span></div>
+            </div>
+            <p class="g-cap">blip · message sent</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ Sheet + panel shells ═══ -->
+      <section>
+        <div class="eyebrow">Shells</div>
+        <h2 class="g-h">Sheet + panel</h2>
+        <div class="g-row top">
+          <div class="g-item">
+            <div class="g-shell">
+              <div class="sheet">
+                <div class="sheet-head">
+                  <div>
+                    <div class="eyebrow">Entry 2 of 3</div>
+                    <h3 class="sheet-title">Mika's take</h3>
+                  </div>
+                  <button class="btn btn-secondary btn-icon" aria-label="Close">✕</button>
+                </div>
+                <div class="sheet-body">
+                  <p class="persona-quote">“Ship the weird version first.”</p>
+                  <p class="detail muted">Mika leans playful — big type, one accent, no hedging.</p>
+                  <div class="tag-row">
+                    <span class="tag tag-accent">bold</span>
+                    <span class="tag tag-accent-2">on brief</span>
+                    <span class="tag tag-neutral">fast</span>
+                  </div>
+                  <div class="divider"></div>
+                  <p class="detail">Supporting copy inside the sheet runs at the 13px detail size.</p>
+                </div>
+                <div class="sheet-foot">
+                  <button class="btn btn-secondary">Previous</button>
+                  <button class="btn btn-primary">Next entry</button>
+                </div>
+              </div>
+            </div>
+            <p class="g-cap">sheet · 392px right overlay</p>
+          </div>
+          <div class="g-item">
+            <div class="g-shell">
+              <div class="panel">
+                <div class="sheet-head">
+                  <div>
+                    <div class="eyebrow">Submissions</div>
+                    <h3 class="sheet-title">Entry 2 of 3
+                      <span class="progress-dots"><i class="done"></i><i class="current"></i><i></i></span>
+                    </h3>
+                  </div>
+                  <button class="btn btn-secondary btn-icon" aria-label="Close">✕</button>
+                </div>
+                <div class="sheet-body">
+                  <p class="detail muted">Counter plus progress dots: sage done, terracotta current, ink-20 untouched.</p>
+                  <div class="tag-row">
+                    <span class="tag tag-accent-2">ranked</span>
+                    <span class="tag tag-neutral">2 of 3</span>
+                  </div>
+                </div>
+                <div class="sheet-foot">
+                  <button class="btn btn-secondary g-btn-sm">← Prev</button>
+                  <button class="btn btn-secondary g-btn-sm">Next →</button>
+                </div>
+              </div>
+            </div>
+            <p class="g-cap">panel · 404px left overlay</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ Preview frame ═══ -->
+      <section>
+        <div class="eyebrow">Shells</div>
+        <h2 class="g-h">Preview frame</h2>
+        <div class="g-row top">
+          <div class="g-item g-w360">
+            <div class="preview" style="width: 100%">
+              <div class="preview-bar"><span class="dot"></span>3000-abc…daytona.works</div>
+              <div class="preview-frame"><div class="preview-loading">warming up the preview…</div></div>
+            </div>
+            <p class="g-cap">preview · loading shimmer</p>
+          </div>
+          <div class="g-item g-w360">
+            <div class="preview" style="width: 100%">
+              <div class="preview-bar"><span class="dot dead"></span>3000-abc…daytona.works</div>
+              <div class="preview-frame">
+                <div class="preview-offline">
+                  <span>preview offline</span>
+                  <button class="btn btn-ghost g-btn-sm">open in new tab</button>
+                </div>
+              </div>
+            </div>
+            <p class="g-cap">preview-offline · dot.dead</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ Verdict cards ═══ -->
+      <section>
+        <div class="eyebrow">Judging</div>
+        <h2 class="g-h">Verdict cards</h2>
+        <div class="g-row top">
+          <div class="g-item g-w300">
+            <div class="verdict-card" style="width: 100%">
+              <div class="who"><span class="juror">juror · product</span><span class="total">26/30</span></div>
+              <p>Nails the brief — one clear promise above the fold and nothing fighting it.</p>
+            </div>
+            <p class="g-cap">verdict-card · product</p>
+          </div>
+          <div class="g-item g-w300">
+            <div class="verdict-card" style="width: 100%">
+              <div class="who"><span class="juror">juror · craft</span><span class="total">24/30</span></div>
+              <p>Confident type scale; spacing wobbles in the footer.</p>
+            </div>
+            <p class="g-cap">verdict-card · craft</p>
+          </div>
+          <div class="g-item g-w300">
+            <div class="verdict-card waiting" style="width: 100%">deliberating…</div>
+            <p class="g-cap">verdict-card.waiting</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ Score rows ═══ -->
+      <section>
+        <div class="eyebrow">Judging</div>
+        <h2 class="g-h">Score rows</h2>
+        <div class="g-item g-w420">
+          <div class="score-rows" style="width: 100%">
+            <div class="score-row winner"><span class="num">74/90</span><span class="name">juno</span><span class="tag tag-accent-2">winner</span></div>
+            <div class="score-row"><span class="num">68/90</span><span class="name">mika</span></div>
+            <div class="score-row"><span class="num">61/90</span><span class="name">otto</span></div>
+          </div>
+          <p class="g-cap">score-rows · winner in sage</p>
+        </div>
+      </section>
+
+      <!-- ═══ Crown banner ═══ -->
+      <section>
+        <div class="eyebrow">Judging</div>
+        <h2 class="g-h">Crown banner</h2>
+        <div class="g-item" style="width: 100%">
+          <div class="g-room" style="width: 100%">
+            <div class="crown-banner">
+              <div class="line">juno takes the round</div>
+              <div class="sub">74 of 90 · two jurors aligned</div>
+            </div>
+          </div>
+          <p class="g-cap">crown-banner · over the dark room</p>
+        </div>
+      </section>
+
+      <!-- ═══ Setup card ═══ -->
+      <section>
+        <div class="eyebrow">Lobby</div>
+        <h2 class="g-h">Setup card</h2>
+        <div class="g-item">
+          <div class="setup-card">
+            <h4>Battle setup</h4>
+            <div>
+              <div class="field-label"><span>Mode</span></div>
+              <div class="seg-row">
+                <button class="on" type="button">Solo</button>
+                <button type="button">Teams</button>
+              </div>
+            </div>
+            <div>
+              <div class="field-label"><span>Round length</span><span>2 min</span></div>
+              <div class="slider-band"><input type="range" min="1" max="10" value="4" aria-label="Round length" /></div>
+            </div>
+            <div class="error-pill">Pick at least two agents before starting.</div>
+            <button class="btn btn-primary">Start round</button>
+          </div>
+          <p class="g-cap">setup-card · seg-row · slider-band · error-pill</p>
+        </div>
+      </section>
+
+      <!-- ═══ Trace timeline ═══ -->
+      <section>
+        <div class="eyebrow">Profile sheet</div>
+        <h2 class="g-h">Trace timeline</h2>
+        <div class="g-item g-w360">
+          <div class="trace" style="width: 100%">
+            <div class="trace-step">
+              <div class="trace-disc">✱</div>
+              <div class="trace-body">The brief wants warmth — start from the sand palette and one terracotta call to action.</div>
+            </div>
+            <div class="trace-step">
+              <div class="trace-disc">✉</div>
+              <div class="trace-body"><span class="msg-eyebrow">vera → otto</span>Take the hero, I'll handle the pricing table.</div>
+            </div>
+            <div class="trace-step kind-build">
+              <div class="trace-disc">❯</div>
+              <div class="trace-body"><code>pnpm create vite bakery --template react</code></div>
+            </div>
+            <div class="trace-step kind-submit">
+              <div class="trace-disc">➤</div>
+              <div class="trace-body">Submitted the entry — landing page, three sections, one accent.</div>
+            </div>
+          </div>
+          <p class="g-cap">trace · thought / message / kind-build / kind-submit</p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

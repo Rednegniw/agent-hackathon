@@ -70,6 +70,15 @@ export function startServer(deps: ServerDeps, port = Number(process.env.PORT ?? 
       'Access-Control-Allow-Origin': '*',
     })
 
+    /**
+     * Flush the headers immediately. writeHead alone buffers until the first
+     * write, so a client connecting to an idle arena — no events yet, next
+     * heartbeat 15s away — never sees the response open and reports itself
+     * offline for as long as nothing happens.
+     */
+    res.flushHeaders()
+    res.write(': open\n\n')
+
     const send = (e: AgentEvent) => res.write(`id: ${e.seq}\ndata: ${JSON.stringify(e)}\n\n`)
 
     /**

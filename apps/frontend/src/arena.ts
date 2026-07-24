@@ -1,29 +1,14 @@
 /**
- * The office's view of the arena. Mirrors apps/arena/src/events.ts — when that
- * file changes, this one has to follow. Duplicated rather than imported
- * because the two apps do not share a package yet; the moment a third consumer
- * appears, lift it into packages/.
+ * The office's view of the arena. The vocabulary is imported straight from
+ * the arena package — one source of truth, no drift. Only the fetch helpers
+ * and status shape (which the arena serves but does not export) live here.
  */
 
-export const AGENT_IDS = ['ada', 'rex', 'juno', 'iris', 'otto', 'vera'] as const
-export type AgentId = (typeof AGENT_IDS)[number]
+export * from '../../arena/src/events'
 
-export type Phase = 'idle' | 'mingle' | 'build' | 'submit' | 'judged'
+import type { Phase } from '../../arena/src/events'
 
-export type EventKind = 'thought' | 'message' | 'build' | 'submit' | 'phase' | 'score'
-
-export interface AgentEvent {
-  seq: number
-  ts: number
-  agentId: AgentId | 'system'
-  kind: EventKind
-  body: string
-  targetId?: AgentId
-  previewUrl?: string
-  audioUrl?: string
-  score?: { mechanical: number; creative: number; rank: number }
-}
-
+/** Mirrors round.ts — kept local so the office doesn't import the arena's dep graph. */
 export type RoundState = 'idle' | 'running' | 'done' | 'failed'
 
 export interface ArenaStatus {
@@ -34,6 +19,9 @@ export interface ArenaStatus {
   startedAt: number | null
   finishedAt: number | null
   error: string | null
+  /** Countdown data for the HUD clock pill. */
+  phaseStartedAt: number | null
+  phaseDurationMs: number | null
 }
 
 export const ARENA_URL = import.meta.env.VITE_ARENA_URL ?? 'http://localhost:4000'

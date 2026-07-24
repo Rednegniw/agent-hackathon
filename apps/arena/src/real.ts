@@ -41,7 +41,27 @@ const teams = TEAMS_ENABLED ? new TeamRoster() : undefined
  */
 const roundIsOpen = () => ['mingle', 'build', 'submit'].includes(clock.phase())
 
-startServer({ log, state: () => ({ phase: clock.phase(), tracks: arena.snapshot(), run: runId }) })
+const bootedAt = Date.now()
+
+/**
+ * Same RoundStatus shape as dev.ts serves, so the office never branches on
+ * which server it is talking to. A real run is one round that starts at boot.
+ */
+startServer({
+  log,
+  state: () => ({
+    state: clock.phase() === 'judged' ? 'done' : 'running',
+    arena: REAL ? 'daytona' : 'fake',
+    roundId: runId,
+    phase: clock.phase(),
+    startedAt: bootedAt,
+    finishedAt: null,
+    error: null,
+    phaseStartedAt: clock.phaseStartedAt,
+    phaseDurationMs: clock.phaseDurationMs,
+    run: runId,
+  }),
+})
 
 clock.onPhase(async (phase) => {
   log.emit({ agentId: 'system', kind: 'phase', body: phase })
