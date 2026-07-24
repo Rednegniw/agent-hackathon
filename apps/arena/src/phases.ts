@@ -43,7 +43,13 @@ export class PhaseClock {
   }
 
   async #enter(phase: Phase) {
-    this.#phase = phase
+    /**
+     * Hooks run BEFORE the phase is published, so phase() only reports a
+     * phase once its setup has finished. Publishing first creates a race:
+     * agents poll phase(), see 'build' the instant it flips, and run ahead
+     * of the provision() hook that is still awaiting. Every agent then finds
+     * no sandbox and sits the round out while six healthy ones exist.
+     */
     for (const h of this.#hooks) {
       try {
         await h(phase)
@@ -51,6 +57,8 @@ export class PhaseClock {
         console.error(`[phases] hook failed on ${phase}:`, err)
       }
     }
+
+    this.#phase = phase
   }
 
   async run() {
