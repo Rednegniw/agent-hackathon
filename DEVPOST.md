@@ -1,7 +1,7 @@
 # Overhacked
 
-Devpost submission draft. Paste the sections below into the corresponding fields
-at https://daytona-hacksprint-sf-jul-2026.devpost.com/
+Devpost submission. Paste each section into the matching field at
+https://daytona-hacksprint-sf-jul-2026.devpost.com/
 
 ---
 
@@ -17,113 +17,89 @@ Overcooked, but the cooks are AI agents and the kitchen is real infrastructure.
 
 ## Summary
 
-Overhacked is a live hackathon where all six contestants are AI agents. Each
-wakes up in its own isolated Daytona sandbox, messages its rivals to carve up the
+Overhacked is a hackathon where every contestant is an AI agent. Each one wakes
+up in its own Daytona sandbox, messages its rivals to form teams and split the
 work, builds a real web app, and ships it to a live URL that is health-checked
-before it counts. Then three AI jurors with different tastes score every entry
-and crown a winner, live, by one point.
+before it counts. Three AI jurors with different tastes then score every entry
+and crown a winner.
 
-The office is a simulation. The code, the sandboxes and the shipped apps are not.
+The office is a simulation. The sandboxes, the shells, the shipped apps and the
+scores are not.
 
----
-
-## The problem
-
-**You cannot tell whether an agent is any good by reading its transcript.**
-
-Everyone shipping agents today faces the same question: is this one better than
-that one? Did the new prompt help? Did the model upgrade actually change
-behaviour, or just the prose? The tools we have answer that with logs, and logs
-are exactly the wrong shape for the question. They show what an agent *said*,
-not what it *built*, and they hide the thing that matters most: what an agent
-does when nothing forces it to do the right thing.
-
-Overhacked answers it differently. Put N agents on the same brief, give each one
-a real machine, and judge what actually came out. The artifact is the evidence.
-
-### Why this is useful outside a hackathon
-
-- **Comparing models and prompts.** Same brief, same tools, same clock. Swap the
-  model or one line of the system prompt and watch what changes in the output
-  rather than in the reasoning trace. We ran exactly this today: the tool
-  description turned out to be load-bearing in a way no transcript would have
-  revealed.
-- **Observing multi-agent behaviour.** Coordination is usually asserted and
-  rarely demonstrated. Here you can see whether agents genuinely divide work or
-  quietly duplicate it. In one of our rounds, one agent told its teammate what
-  it was building and the teammate replied that there was no overlap, so both
-  shipped different things. In an earlier round, before we gave them a delivery
-  channel, three agents independently built variations of the same text tool.
-  That contrast is the product.
-- **Safe observation of autonomous behaviour.** An agent with a shell, no
-  supervision and a deadline is exactly the thing you want to watch inside a box
-  it cannot escape. Every command runs in a sandbox with its own kernel; agents
-  cannot reach the orchestrator or each other; every action is an append-only
-  event you can replay afterwards.
+![The office during the build phase](docs/images/office.png)
 
 ---
 
-## What it does
+## Why
 
-1. **Mingle.** Agents meet, message each other, and form teams. A team is judged
-   as one entry, so the conversation decides the round rather than decorating it.
-2. **Build.** Each agent gets its own Daytona sandbox with node, python and git.
-   It writes files, runs commands, starts a dev server.
-3. **Submit.** The agent declares a port. We mint a signed preview URL, poll it
-   until it genuinely serves, and only then accept the submission. A dead server
-   is rejected, and the agent can fix it and try again.
-4. **Judge.** Every entry presents its own case, argued strictly from its trace
-   and explicitly forbidden from claiming anything not in the record. Three AI
-   jurors with different lenses (product, craft, engineering) score it
-   independently across three criteria.
-5. **Crown.** Highest aggregate wins, live, in the room.
+You cannot tell whether an agent is any good by reading its transcript. Logs
+show what an agent *said*, not what it *built*, and they hide the thing that
+matters most: what an agent does when nothing forces it to do the right thing.
+
+Overhacked answers that differently. Put N agents on one brief, give each a real
+machine, and judge what actually came out. The artifact is the evidence.
+
+That makes it a rig for three things teams do badly today: comparing models and
+prompts on identical conditions, observing whether agents genuinely coordinate
+or quietly duplicate, and watching autonomous behaviour inside a box it cannot
+escape.
 
 ---
 
 ## What actually happened when we ran it
 
-Numbers from real rounds today, not projections.
+Real rounds today, all committed and greppable.
 
 | | |
 |---|---|
-| Sandboxes provisioned | 6 concurrent in **~1.5s**, about 470ms each solo |
-| Agents that shipped working apps | **4 of 4**, first try, no retries |
-| What they built | 11 to 17KB single-page apps with real logic: colour harmony with live WCAG contrast maths, a mood-based palette explorer, a 90-minute sleep-cycle calculator |
-| A later judged round | **3 of 3** shipped, presented, scored and crowned in 355s |
-| Cost of a full round | **$1.95** on Haiku |
-| Winning margin | **one point**, 48 to 47 out of 90 |
+| Biggest round | **10 agents, 3 self-formed teams, 10/10 shipped** a live health-checked URL, judged and crowned in **7m47s** |
+| Provisioning | 6 sandboxes concurrently in **~1.5s** |
+| One team round | 6 agents, **47 agent-to-agent messages, 88 sandbox commands**, 13 screenshots the agents took of their own apps |
+| Cost | **$1.95** per full round on Haiku |
+| Closest finish | **57 / 52 / 51** out of 90 across three teams |
 
-**Receipts.** Every number and quote above is committed and greppable, which is
-unusual for a hackathon submission and deliberate here.
-[`fixtures/first-real-round.jsonl`](https://github.com/Rednegniw/agent-hackathon/blob/main/fixtures/first-real-round.jsonl)
-is the 4-of-4 round,
+**They negotiate interfaces across machines.** rex, integrating for team-1, sent
+juno a contract before either had code: the `DriftTimer` namespace, `.timer-`
+class prefix, `drift_*` localStorage keys, and `DriftAudio.setVolume(soundId,
+0-1)`. Two agents on two different machines agreeing on an API, unprompted.
+
+**They deduplicate on purpose.** From the same round, rex to juno:
+
+> Heads up: ada was about to build the same timer engine, I redirected her to
+> own stats/streaks + keyboard shortcuts + completion chime instead, so you're
+> the sole owner of the countdown.
+
+**They test without being asked.** otto, on his timezone-overlap math:
+
+> Unit-tested longestRun in isolation (wraparound 22-23-0-1 → start:22,len:4 ✓;
+> normal case ✓; all-day overlap ✓; zero-overlap → null ✓).
+
+**They debugged our infrastructure for us.** Two agents noticed a delivered file
+was byte-identical to one they had just sent, and diagnosed the race in our own
+`share_file` implementation:
+
+> Ah, mystery solved: your share landed in my sandbox right before I called
+> share_file to you, so I unknowingly bounced your own file back. My original
+> build got overwritten too.
+
+**The jurors disagree, which is the point.** On one entry: 13/30 from the
+engineer juror ("polished pitch, chaotic build (three conflicting file
+rewrites), zero functional verification") and 23/30 from the craft juror
+("restraint in positioning elevates an otherwise incremental tool"). A single
+judge would have flattened a 10-point disagreement into one unfalsifiable
+number.
+
+**Receipts.**
+[`fixtures/big-round.jsonl`](https://github.com/Rednegniw/agent-hackathon/blob/main/fixtures/big-round.jsonl)
+(10 agents),
+[`fixtures/team-round.jsonl`](https://github.com/Rednegniw/agent-hackathon/blob/main/fixtures/team-round.jsonl)
+(the quotes above),
 [`fixtures/judged-run.jsonl`](https://github.com/Rednegniw/agent-hackathon/blob/main/fixtures/judged-run.jsonl)
-is the judged round with all nine juror scores,
-[`fixtures/messaging-proof.jsonl`](https://github.com/Rednegniw/agent-hackathon/blob/main/fixtures/messaging-proof.jsonl)
-is the exchange quoted below, and
-[`docs/judged-run.html`](https://github.com/Rednegniw/agent-hackathon/blob/main/docs/judged-run.html)
-renders it. Each round is also a Braintrust experiment.
-
-**The jurors disagreed, which is the point.** On the same entry, the product
-juror gave 13/30 ("no evidence of differentiation from Obsidian to justify
-switching") while the craft juror gave 20/30 ("thoughtful philosophy and
-ruthless scope"). One judge would have flattened that into a single
-unfalsifiable number. Three that disagree is a signal you can act on.
-
-**And they talk to each other.** Verbatim from the event log:
-
-> **rex → ada:** hey - I'm building a focus timer (Pomodoro-style) with smooth
-> gradient animations and keyboard shortcuts. It's minimalist and visually
-> striking. What are you working on? Let's make sure we're not overlapping.
->
-> **ada → rex:** Building a JSON validator/formatter with live stats and minify
-> toggle. Totally different from a timer, we're good, no overlap. Let's ship!
+(all nine juror scores). Every round is also a Braintrust experiment.
 
 ---
 
-## How we built it
-
-**One orchestrator, N sandboxes, one event log.**
+## How it works
 
 ```
    agent loop (Claude Agent SDK)  ──▶  five custom tools  ──▶  Daytona sandbox per agent
@@ -132,82 +108,43 @@ unfalsifiable number. Three that disagree is a signal you can act on.
             │  mid-run as new user turns   append-only event log ──▶ SSE ──▶ the room
 ```
 
-- **The agent loop runs in the orchestrator, not inside the sandbox.** Each agent
-  is a `query()` session whose built-in tools are stripped entirely
-  (`tools: []`), replaced by five custom tools that proxy into its own sandbox.
-  An agent has no path to the machine running the loop.
-- **Messaging is real, not cosmetic.** The prompt is an
-  `AsyncIterable<SDKUserMessage>` rather than a string, so the orchestrator
-  injects inbound mail as new user turns mid-run. Sandboxes have isolated
-  network stacks and never touch each other; every message is mediated, logged
-  and replayable.
-- **Submissions are verified, not claimed.** `getSignedPreviewUrl` plus a polling
-  health check gate every submission, so nothing enters judging that is not
-  actually serving.
-- **The event log is the spine.** Everything is an append-only event. The room is
-  a renderer over it, which means any round can be replayed exactly.
+- **The loop runs in the orchestrator, not the sandbox.** Each agent is a
+  `query()` session with its built-in tools stripped entirely (`tools: []`) and
+  replaced by five custom tools that proxy into its own sandbox. An agent has no
+  path to the machine running the loop.
+- **Messaging is real.** The prompt is an `AsyncIterable<SDKUserMessage>`, so the
+  orchestrator injects inbound mail as new user turns mid-run.
+- **Submissions are verified, not claimed.** A signed preview URL plus a polling
+  health check gates every submission. A dead server is rejected and the agent
+  can fix it and retry.
+- **The event log is the spine.** Everything is append-only, so any round
+  replays exactly.
 
 ### Safeguards
 
-Six autonomous agents executing generated code needs an answer, and ours is
-architectural rather than a promise in a prompt:
-
-- Every agent runs in a Daytona sandbox with its own kernel, filesystem and
-  network stack
-- `tools: []` removes every built-in file and shell tool, so the orchestrator
-  host is unreachable
-- Agents cannot reach each other; all messaging is mediated and logged
-- Sandboxes are ephemeral with a hard wall-clock TTL, so nothing outlives a round
-- Every action is auditable and replayable from the event log
+Six autonomous agents running generated code needs an architectural answer, not
+a promise in a prompt: one Daytona sandbox per agent with its own kernel,
+filesystem and network stack; `tools: []` so the orchestrator host is
+unreachable; no agent-to-agent network path, all messaging mediated and logged;
+ephemeral sandboxes with a hard wall-clock TTL; every action auditable and
+replayable.
 
 ---
 
-## Sponsor tools and how we integrated them
+## Sponsor tools
 
-**Daytona** is the substrate, not a checkbox. One sandbox per agent, created in
-under a second, each with its own kernel and network stack. We use signed
-preview URLs as the submission artifact itself: an agent has not shipped until
-its URL returns 200 to a health check. Sandbox lifecycle, TTLs, labels and
-reclamation are all managed through the SDK. Along the way we measured the
-account's vCPU ceiling the hard way and built a preflight guard for it.
+**Daytona** is the substrate. One sandbox per agent, created in under a second,
+each isolated. Signed preview URLs *are* the submission artifact: an agent has
+not shipped until its URL returns 200 to a health check. Lifecycle, TTLs, labels
+and reclamation all run through the SDK.
 
-**Braintrust** is where judging lives. Each round is logged as an experiment
-with one case per entry: the brief as input, the shipped artifact and the
-agent's own presentation as output, and per-criterion scores from every juror.
-It turns "the AI judge liked it" into an eval you can inspect, compare across
-rounds, and argue with.
+**Braintrust** is where judging lives. Each round is an experiment, one case per
+entry: the brief as input, the shipped app and the agent's own presentation as
+output, per-criterion scores from every juror. "The AI judge liked it" becomes
+an eval you can diff across rounds.
 
-**ElevenLabs** is scoped but not shipped, so we are not claiming it. The hook is
-already in place: the `submit` tool takes a spoken one-sentence `pitch`, written
-to be heard rather than read, which is what the agents deliver to the jurors.
-
----
-
-## The room
-
-The room is fully designed and in the repo under `design/battle-app-system/`:
-four self-documenting screens (component kit, live room scene, lobby, judging)
-plus ten penguin avatars and the component library. Agents live as avatars on an
-illustrated canvas, with live submission panels and ranking during judging.
-
-The aesthetic is deliberate. Watching agents work should feel like watching a
-kitchen in Overcooked, not like reading a log file. The chaos is the honest
-representation: six autonomous things, one clock, and no supervision.
-
----
-
-## What we learned
-
-- **Tool descriptions are load-bearing.** Every agent backgrounded its dev server
-  with the exact `nohup ... &` incantation spelled out in one tool description.
-  Without it they would have blocked until timeout and lost the round.
-- **A broad brief produces convergence, not diversity.** Three agents with
-  different personas and no way to talk all built text tools. Giving them a
-  delivery channel is what produced genuinely different projects.
-- **A single LLM judge is not a measurement.** We only trusted the scores once
-  three jurors disagreed in ways we could read.
-- **Isolation is not optional.** An early version let agents share a machine.
-  They found each other's servers and started killing each other's processes.
+**ElevenLabs** is scoped, not shipped, so we are not claiming it. The hook is in
+place: `submit` takes a spoken one-sentence `pitch`, written to be heard.
 
 ---
 
@@ -216,7 +153,7 @@ representation: six autonomous things, one clock, and no supervision.
 ```bash
 pnpm install
 cp .env.example .env          # fill in the keys
-pnpm --filter arena cleanup   # reclaim any stale sandboxes first
+pnpm --filter arena cleanup   # reclaim any stale sandboxes
 ARENA=daytona pnpm --filter arena real
 ```
 
@@ -226,50 +163,42 @@ Repo: https://github.com/Rednegniw/agent-hackathon
 
 ## Images to upload, in order
 
-Devpost round one is judged on the page, and the page is a visual medium. Upload
-these as the gallery, in this order. The first is the thumbnail.
+| # | Image | Caption |
+|---|-------|---------|
+| 1 | `docs/images/office.png`, the office mid-build | "Ten agents, three teams, one brief, no humans." |
+| 2 | Two live preview URLs side by side in a browser | "Nobody wrote these pages. Two agents did, in their own sandboxes, in one round." |
+| 3 | The judging panel, three juror scores on one entry | "Three jurors, three lenses, and they disagree by ten points." |
+| 4 | Daytona dashboard, ten labelled sandboxes | "One isolated machine per agent, provisioned in about a second." |
+| 5 | The Braintrust experiment view | "Every round is an experiment you can diff against the last one." |
+| 6 | `design/battle-app-system/uploads/Penguin Avatar Art.png` | "Every agent has a face and a stated disposition that shapes what it builds." |
 
-| # | Image | Caption to use |
-|---|-------|----------------|
-| 1 | The room, agents on the canvas | "Ten agents, one brief, no humans." |
-| 2 | `design/battle-app-system/uploads/Penguin Avatar Art.png` | "Every agent has a face. They are not interchangeable: each has a stated disposition that shapes what it builds." |
-| 3 | Screenshot: two live preview URLs side by side in a browser | "Nobody wrote these pages. Two agents did, in their own sandboxes, in one round." |
-| 4 | Screenshot: the Daytona dashboard, ten labelled sandboxes | "One isolated machine per agent, provisioned in about two seconds." |
-| 5 | Screenshot: the judging panel, three juror scores on one entry | "Three jurors, three lenses, and they disagree." |
-| 6 | Screenshot: the Braintrust experiment view | "Every round is an experiment you can diff against the last one." |
-| 7 | `docs/judged-run.html` rendered, the swimlane timeline | "The whole round as an append-only log. Every claim on this page is in it." |
-
-Images 3 and 5 are the two that do the most work. A judge who sees a real
-preview URL and a real disagreement between jurors believes everything else.
-
-The design system lives in `design/battle-app-system/` with four
-self-documenting screens; open them over HTTP to grab clean captures.
+Images 2 and 3 do the most work. A judge who sees a real preview URL and a real
+disagreement between jurors believes everything else.
 
 ---
 
-## Demo video outline, under 2 minutes
+## Demo video, under 2 minutes
 
 | Time | Shot | Voiceover |
 |------|------|-----------|
-| 0-7s | Cold open. The room, six penguins idle. Caption only. | silence |
-| 7-20s | Mingle. Message bubbles in the room, then the real rex/ada overlap exchange. | "They talk first, so they don't build the same thing." |
-| 20-38s | Split screen: room left, raw `sandbox_bash` events streaming right. Cut to the Daytona dashboard, six labelled sandboxes. | "Every command runs in its own Daytona sandbox." |
-| 38-52s | A submission being health-checked. If we have a rejected dead server, show it. | "A URL that doesn't serve doesn't count." |
-| 52-70s | Browser. Two real preview URLs side by side, actually clicked through. **Hold this shot.** | "Nobody wrote these. The agents did." |
-| 70-90s | Judging. Presentations scroll, then three juror scores land one at a time on the same entry: 13, 20, 14. Crown, 48 to 47. | "Three jurors, three lenses. They disagree, and the disagreement is the signal." |
-| 90-105s | The Braintrust experiment view: cases, per-criterion scores, comments. | "Every round is an experiment you can diff." |
-| 105-118s | Back to the room, zoom out. Repo URL and team name. | "Real shells, no supervision, one box each. That's why it's safe to watch." |
+| 0-7s | The office, penguins idle. Caption only. | silence |
+| 7-20s | Mingle, then the real dedup message: "I redirected her to own stats instead." | "They talk first, so they don't build the same thing." |
+| 20-38s | Split screen: office left, raw `sandbox_bash` events right. Cut to the Daytona dashboard. | "Every command runs in its own Daytona sandbox." |
+| 38-52s | A submission being health-checked. | "A URL that doesn't serve doesn't count." |
+| 52-70s | Two real preview URLs side by side, clicked through. **Hold this shot.** | "Nobody wrote these. The agents did." |
+| 70-90s | Judging. Three juror scores land on one entry: 13, 16, 23. Crown. | "They disagree, and the disagreement is the signal." |
+| 90-105s | The Braintrust experiment view. | "Every round is an experiment you can diff." |
+| 105-118s | Zoom out on the office. Repo URL, team name. | "Real shells, no supervision, one box each. That's why it's safe to watch." |
 
-The 52-70s shot is the proof shot. Everything else is context; that is the one
-that makes a judge believe the rest.
+The 52-70s shot is the proof shot.
 
 ---
 
-## Submission checklist
+## Checklist
 
 - [ ] Team name: **Overhacked**
 - [ ] Team members with emails and socials
 - [ ] Demo video, under 2 minutes
-- [ ] Description: summary, problem and impact, architecture, sponsor tools
-- [ ] Public repo URL: https://github.com/Rednegniw/agent-hackathon
-- [ ] Images: room art, two live previews side by side, the Braintrust view
+- [ ] Description pasted
+- [ ] Repo: https://github.com/Rednegniw/agent-hackathon
+- [ ] Images 1-6 uploaded in order

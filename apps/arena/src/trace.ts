@@ -24,6 +24,13 @@ export interface AgentTrace {
   /** The agent's own reasoning, as it streamed. */
   reasoning: string[]
 
+  /**
+   * Set only for a team entry. Its presence tells renderTrace that `actions`
+   * covers several agents working in parallel in separate sandboxes, which
+   * reads very differently from one agent's sequential history.
+   */
+  members?: AgentId[]
+
   bytesWritten: number
   toolCalls: number
   firstActionAt?: number
@@ -56,20 +63,43 @@ export function traceFor(events: AgentEvent[], agentId: AgentId): AgentTrace {
 
 /** Compact, human-readable form. This is what a judge actually reads. */
 export function renderTrace(t: AgentTrace): string {
+  const team = t.members && t.members.length > 1 ? t.members : null
+
   const lines = [
-    `AGENT: ${t.agentId}`,
+    team ? `TEAM: ${t.agentId} (${team.join(' + ')})` : `AGENT: ${t.agentId}`,
     `PITCH: ${t.pitch ?? '(never submitted)'}`,
     `PRODUCT VIDEO: ${t.product ?? '(never filmed one)'}`,
     `SHIPPED: ${t.previewUrl ?? 'nothing'}`,
     `BYTES WRITTEN: ${t.bytesWritten}`,
-    '',
-    'WHAT IT DID:',
-    ...t.actions.map((a, i) => `  ${i + 1}. ${a}`),
   ]
+
+  /**
+   * Without this, jurors read a team's merged build log as one file being
+   * rewritten once per member and marked it down for "chaotic iteration" and
+   * "three people rewriting the same file". Each member has an isolated
+   * sandbox; concurrent drafting is the intended design, not indecision.
+   */
+  if (team) {
+    lines.push(
+      '',
+      `These ${team.length} agents each work in their OWN isolated sandbox and deliver files to`,
+      'the integrator. The sections below are PARALLEL work by different authors, not',
+      'sequential edits to one file. Several members each writing their own index.html is',
+      'expected, not a sign of thrash.',
+    )
+  }
+
+  lines.push('', 'WHAT IT DID:')
+
+  // Numbering implies one ordered history, which a team trace is not.
+  lines.push(...t.actions.map((a, i) => (team ? `  ${a}` : `  ${i + 1}. ${a}`)))
 
   if (t.reasoning.length) {
     lines.push('', 'HOW IT REASONED:')
-    for (const r of t.reasoning.slice(0, 6)) lines.push(`  - ${r.slice(0, 200)}`)
+
+    // A team's budget scales with its members, or only the first speaks.
+    const cap = team ? 6 * team.length : 6
+    for (const r of t.reasoning.slice(0, cap)) lines.push(`  - ${r.slice(0, 200)}`)
   }
 
   return lines.join('\n')
@@ -92,19 +122,35 @@ export function traceForTeam(events: AgentEvent[], members: AgentId[], label: st
 
   return {
     agentId: label as AgentId,
+    members,
     pitch: submitted.pitch,
     previewUrl: submitted.previewUrl,
 
-    // Interleaved by time, so the record reads as one build, which it was.
-    actions: members
-      .flatMap((m) => events.filter((e) => e.agentId === m && e.kind === 'build'))
-      .sort((a, b) => a.ts - b.ts)
-      .map((e) => `${e.agentId}: ${e.body}`),
+    /**
+     * Grouped by author, NOT interleaved by time.
+     *
+     * Interleaving was actively costing teams points. Each teammate drafts in
+     * their own sandbox, so three members each writing their own app/index.html
+     * is three parallel drafts; flattened into one timeline it reads as one
+     * file being rewritten three times. Jurors said exactly that, unprompted:
+     * "three people rewriting the same file", "chaotic iteration via
+     * file-swapping". They were describing share_file, the collaboration
+     * mechanism, and scoring it as thrash.
+     *
+     * Each member's work is now labelled and kept contiguous, so the judge can
+     * tell parallel authorship from indecision.
+     */
+    actions: members.flatMap((m) => {
+      const own = events.filter((e) => e.agentId === m && e.kind === 'build')
+      if (!own.length) return []
+      return [`--- ${m}, in their own sandbox ---`, ...own.map((e) => `${m}: ${e.body}`)]
+    }),
 
-    reasoning: members
-      .flatMap((m) => events.filter((e) => e.agentId === m && e.kind === 'thought'))
-      .sort((a, b) => a.ts - b.ts)
-      .map((e) => `${e.agentId}: ${e.body}`),
+    reasoning: members.flatMap((m) => {
+      const own = events.filter((e) => e.agentId === m && e.kind === 'thought')
+      if (!own.length) return []
+      return [`--- ${m} ---`, ...own.map((e) => `${m}: ${e.body}`)]
+    }),
 
     bytesWritten: parts.reduce((n, p) => n + p.bytesWritten, 0),
     toolCalls: parts.reduce((n, p) => n + p.toolCalls, 0),
