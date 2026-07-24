@@ -25,3 +25,6 @@ runs/
 # they are noise — except for the round you demo from. Commit that one round's
 # directory deliberately with `git add -f`, the same way runs/ works.
 apps/arena/public/media/
+
+# macOS
+.DS_Store

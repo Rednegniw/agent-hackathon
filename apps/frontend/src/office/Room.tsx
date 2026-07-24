@@ -17,8 +17,30 @@ import Penguin from './Penguin'
 
 const GLYPHS = ['🔥', '👏', '💀', '🤯', '✨', '😤']
 
-/** Walkable floor as a fraction of the stage: off the water, off the riser. */
-const BOUNDS = { x0: 0.06, x1: 0.56, y0: 0.48, y1: 0.78 }
+/**
+ * Two rooms, one stage. The agents work in the office and only move to the
+ * aquarium lounge once the building is over and it is time to present — the
+ * projector and the cushions are a demo, not a desk.
+ */
+export type Scene = 'office' | 'stage'
+
+const SCENES: Record<Scene, { art: string; bounds: Bounds }> = {
+  /**
+   * The whole floor. Nothing here is unstandable the way the aquarium's water
+   * is, so this only keeps clear of the window wall, the counter on the right
+   * and the tray along the bottom — overlapping a desk reads as sitting at it.
+   */
+  office: { art: '/Hack-room.png', bounds: { x0: 0.08, x1: 0.70, y0: 0.30, y1: 0.86 } },
+  /** Off the water, off the riser. */
+  stage: { art: '/room.png', bounds: { x0: 0.06, x1: 0.56, y0: 0.48, y1: 0.78 } },
+}
+
+interface Bounds {
+  x0: number
+  x1: number
+  y0: number
+  y1: number
+}
 
 interface Walker {
   x: number
@@ -36,18 +58,20 @@ interface Burst {
   top: number
 }
 
-function randPoint(stageWidth: number, panelInset: number) {
+function randPoint(stageWidth: number, panelInset: number, bounds: Bounds) {
   // Keep the 48px plate and its pill clear of whatever panel is open.
   const maxX = (stageWidth - panelInset - 70) / (stageWidth || 1)
-  const x1 = Math.max(BOUNDS.x0 + 0.1, Math.min(BOUNDS.x1, maxX))
+  const x1 = Math.max(bounds.x0 + 0.1, Math.min(bounds.x1, maxX))
   return {
-    x: BOUNDS.x0 + Math.random() * (x1 - BOUNDS.x0),
-    y: BOUNDS.y0 + Math.random() * (BOUNDS.y1 - BOUNDS.y0),
+    x: bounds.x0 + Math.random() * (x1 - bounds.x0),
+    y: bounds.y0 + Math.random() * (bounds.y1 - bounds.y0),
   }
 }
 
 export interface RoomProps {
   derived: Fold
+  /** Which room is on screen. The walkable floor differs between the two. */
+  scene?: Scene
   /** Right-hand inset the walkers should avoid, in px. */
   panelInset?: number
   /** Agent whose thought bubble should show, and the text. */
@@ -63,6 +87,7 @@ export interface RoomProps {
 
 export default function Room({
   derived,
+  scene = 'office',
   panelInset = 0,
   bubbles,
   blips,
@@ -80,6 +105,22 @@ export default function Room({
   const [bursts, setBursts] = useState<Burst[]>([])
 
   inset.current = panelInset
+
+  /**
+   * Read through a ref for the same reason as `inset`: the rAF loop is mounted
+   * once, so anything it needs per-frame has to reach it without a re-subscribe.
+   */
+  const bounds = useRef(SCENES[scene].bounds)
+  bounds.current = SCENES[scene].bounds
+
+  /**
+   * Changing room drops every walker. Positions are fractions of the stage, and
+   * the two floors barely overlap — keeping them would strand agents on the
+   * water or inside a desk until their next target happened to land elsewhere.
+   */
+  useEffect(() => {
+    sim.current.clear()
+  }, [scene])
 
   const spawn = useCallback((left: number, top: number, glyph: string) => {
     const id = Math.random().toString(36).slice(2)
@@ -106,7 +147,7 @@ export default function Room({
           let a = sim.current.get(id)
 
           if (!a) {
-            const p = randPoint(w, inset.current)
+            const p = randPoint(w, inset.current, bounds.current)
             a = { ...p, tx: p.x, ty: p.y, wait: 400 + Math.random() * 2600, speed: 26 + Math.random() * 22 }
             sim.current.set(id, a)
           }
@@ -119,7 +160,7 @@ export default function Room({
             const dist = Math.hypot(dx * w, dy * h)
 
             if (dist < 3) {
-              const p = randPoint(w, inset.current)
+              const p = randPoint(w, inset.current, bounds.current)
               a.tx = p.x
               a.ty = p.y
               a.wait = 1200 + Math.random() * 5000
@@ -162,7 +203,7 @@ export default function Room({
 
   return (
     <div className="room">
-      <img className="room-art" src="/room.png" alt="" />
+      <img className="room-art" src={SCENES[scene].art} alt="" />
 
       <div className="room-stage" ref={stageRef} data-stage="1">
         {ROSTER.map((id) => (

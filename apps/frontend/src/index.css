@@ -98,6 +98,8 @@ h1, h2, h3, h4, h5, h6 { letter-spacing: -0.01em; }
 .pill-dot.shipped { background: var(--color-accent-2-500); }
 .pill-dot.team-a { background: var(--color-accent-500); }
 .pill-dot.team-b { background: var(--color-accent-2-500); }
+.pill-dot.team-c { background: #4a8fb0; }
+.pill-dot.team-d { background: #9a6bb0; }
 
 /* thought bubble — inside the penguin element so it tracks the walker */
 .bubble {
@@ -123,7 +125,13 @@ h1, h2, h3, h4, h5, h6 { letter-spacing: -0.01em; }
 }
 .hud-pill .dot { width: 9px; height: 9px; border-radius: 999px; background: var(--color-live); animation: pulse 1.6s ease-in-out infinite; flex: none; }
 .hud-pill .dot.off { background: var(--color-neutral-500); animation: none; }
-.hud-pill.clock { font-family: var(--font-heading); font-size: 15px; font-weight: var(--font-heading-weight); }
+/* The clock is the one pill you read at a glance mid-round, so it is sized to be
+   legible from across a room and tabular so the digits stop jittering. */
+.hud-pill.clock {
+  font-family: var(--font-heading); font-size: 22px; font-weight: var(--font-heading-weight);
+  padding: 6px 18px; font-variant-numeric: tabular-nums; letter-spacing: 0.01em;
+}
+.hud-pill.clock.urgent { color: var(--color-live); animation: pulse 1s ease-in-out infinite; }
 .hud-pill.quiet { font-weight: 400; color: color-mix(in srgb, var(--color-text) 62%, transparent); }
 .hud-pill .team-count { display: inline-flex; align-items: center; gap: 5px; }
 .hud-pill .team-count .pill-dot { width: 8px; height: 8px; }
@@ -249,12 +257,136 @@ h1, h2, h3, h4, h5, h6 { letter-spacing: -0.01em; }
 
 /* ---- operator panel (lobby, from Setup Popovers) ---- */
 .lobby { position: absolute; inset: 0; z-index: 1150; display: grid; place-items: center; }
+.lobby-stack { display: flex; flex-direction: column; gap: 12px; animation: popIn 340ms var(--ease) both; }
 .setup-card {
+  /* position: relative is what the side popovers anchor to. */
+  position: relative;
   width: 408px; background: var(--color-neutral-100); border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
-  padding: 18px 20px; display: flex; flex-direction: column; gap: 16px;
-  animation: popIn 340ms var(--ease) both;
+  padding: 13px 14px; display: flex; flex-direction: column; gap: 12px;
 }
 .setup-card h4 { margin: 0; font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 20px; }
+
+.setup-head { display: flex; align-items: center; gap: 8px; }
+.setup-title { flex: 1; margin: 0; }
+.btn-pill { border-radius: 999px; font-size: 11px; padding: 4px 11px; }
+
+.setup-cols { display: flex; gap: 14px; align-items: flex-start; }
+.setup-teams { width: 112px; flex-shrink: 0; }
+.setup-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+
+.micro-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 7px;
+}
+.micro-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.micro-row .micro-label { margin-bottom: 6px; }
+.micro-value { font-size: 11px; font-weight: 700; margin-bottom: 6px; }
+.caption {
+  font-size: 9px; line-height: 1.4; margin-top: 8px;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+}
+
+/* The teams control stacks, so it needs a boxier radius than the pill row. */
+.seg-row.stacked { flex-direction: column; gap: 3px; border-radius: 12px; }
+.seg-row.stacked button {
+  display: flex; align-items: center; gap: 6px; text-align: left;
+  font-size: 11px; font-weight: 700; padding: 5px 9px;
+}
+
+/* ---- disclosure rows + their side popovers ---- */
+.combo-stack { display: flex; flex-direction: column; gap: 5px; }
+.combo {
+  display: flex; align-items: center; gap: 8px; width: 100%; cursor: pointer;
+  font-family: var(--font-body); padding: 7px 9px; border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--color-neutral-900) 10%, transparent);
+  transition: all 160ms var(--ease);
+  background-image: linear-gradient(180deg, var(--color-neutral-100), var(--color-neutral-200));
+  color: var(--color-text);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-neutral-900) 12%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-neutral-100) 55%, transparent);
+}
+.combo.open {
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-neutral-100) 12%, var(--color-accent-500)), var(--color-accent-600));
+  color: var(--color-neutral-100);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-neutral-900) 20%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-neutral-100) 22%, transparent);
+}
+.combo:disabled { cursor: default; opacity: 0.6; }
+.combo-text { flex: 1; min-width: 0; text-align: left; }
+.combo-name { display: block; font-size: 11px; font-weight: 700; }
+.combo-sub {
+  display: block; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.combo.open .combo-sub { color: inherit; opacity: 0.8; }
+.combo-chevron { font-size: 11px; opacity: 0.5; }
+
+.side-pop {
+  position: absolute; left: calc(100% + 10px); top: 0; width: 214px; z-index: 3;
+  background: var(--color-neutral-100); border-radius: 14px; box-shadow: var(--shadow-lg);
+  padding: 10px; animation: popInSide 200ms var(--ease) both;
+}
+.pop-head { display: flex; align-items: baseline; gap: 8px; }
+.pop-head .eyebrow { flex: 1; font-size: 9px; margin-bottom: 8px; }
+.pop-actions { display: flex; gap: 3px; margin-bottom: 8px; }
+.tiny {
+  cursor: pointer; font-family: var(--font-body); font-size: 9px; font-weight: 700;
+  line-height: 1.15; padding: 4px 9px; border-radius: 999px;
+  color: color-mix(in srgb, var(--color-text) 68%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-neutral-900) 10%, transparent);
+  background-image: linear-gradient(180deg, var(--color-neutral-100), var(--color-neutral-200));
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-neutral-900) 12%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-neutral-100) 55%, transparent);
+}
+.pop-list {
+  display: flex; flex-direction: column; gap: 1px; max-height: 132px; overflow-y: auto;
+  margin: 0 -3px; padding: 0 3px;
+}
+.pop-list.tall { max-height: 190px; }
+.pop-foot { margin-top: 8px; border-top: 1px solid var(--color-divider); padding-top: 8px; }
+.pop-foot .micro-label { margin-top: 8px; }
+.pop-foot .micro-label:first-child { margin-top: 0; }
+.pop-foot .seg-row button { font-size: 11px; padding: 5px 10px; }
+
+.check-row {
+  display: flex; align-items: center; gap: 7px; width: 100%; border: none; cursor: pointer;
+  text-align: left; font-family: var(--font-body); color: var(--color-text);
+  padding: 5px 6px; border-radius: 9px; background: transparent; transition: background 140ms;
+}
+.check-row:hover { background: var(--color-neutral-200); }
+.check-row.on { background: var(--color-accent-100); }
+.check-box {
+  width: 15px; height: 15px; border-radius: 5px; flex-shrink: 0; display: grid; place-items: center;
+  font-size: 8px; font-weight: 700; transition: all 140ms;
+  background: var(--color-neutral-100); color: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--color-neutral-400);
+}
+.check-box.on { background: var(--color-accent-500); color: var(--color-neutral-100); box-shadow: none; }
+.check-glyph { font-size: 12px; width: 15px; flex-shrink: 0; }
+.check-text { flex: 1; min-width: 0; }
+.check-name { display: block; font-size: 11px; font-weight: 600; }
+.check-sub { display: block; font-size: 9px; color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+
+/* ---- the brief ---- */
+.brief-card {
+  width: 408px; background: var(--color-neutral-100); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg); padding: 12px 12px 10px;
+}
+.brief-input {
+  width: 100%; box-sizing: border-box; border: none; background: var(--color-neutral-200);
+  border-radius: 12px; font-family: var(--font-body); font-size: 13px; line-height: 1.5;
+  resize: none; padding: 9px 12px; color: var(--color-text);
+}
+.brief-input:focus { outline: 2px solid var(--color-accent-500); outline-offset: -1px; }
+.brief-foot { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+.brief-foot .btn-pill { font-size: 12px; padding: 6px 14px; }
+.brief-foot .btn-primary { padding: 8px 20px; font-size: 13px; white-space: nowrap; }
+.brief-spacer { flex: 1; }
+
+@keyframes popInSide {
+  from { transform: translateX(-8px) scale(0.99); opacity: 0; filter: blur(4px); }
+  to { transform: none; opacity: 1; filter: blur(0); }
+}
 .field-label { font-size: 12px; font-weight: 600; color: color-mix(in srgb, var(--color-text) 70%, transparent); display: flex; justify-content: space-between; align-items: baseline; }
 .seg-row { display: flex; background: var(--color-neutral-200); border-radius: 999px; padding: 3px; }
 .seg-row button {
