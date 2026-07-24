@@ -1,5 +1,4 @@
-# Secrets
-.env
+# Local overrides (shared .env is committed intentionally)
 .env.local
 .env.*.local
 
