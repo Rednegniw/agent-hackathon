@@ -445,6 +445,26 @@ losing state.
 
 ---
 
+## Sponsor surface
+
+Seven partners: Daytona, Braintrust, ElevenLabs, Fireworks AI, WorkOS,
+CodeRabbit, CopilotKit. Depth on the one doing real work beats breadth across
+seven logos, so this is deliberate rather than exhaustive.
+
+| Partner | Use | Status |
+|---------|-----|--------|
+| Daytona | One sandbox per agent, snapshot-backed, signed preview URL as the submission artifact | core |
+| Braintrust | Mechanical checks as code scorers, creative rank as an LLM-judge scorer, per track | optional, do first if ahead |
+| ElevenLabs | One voiced pitch line per agent at submit time, six clips total | optional, demo polish |
+| Fireworks AI | Not used: a second inference path makes agents unfair to each other | skipped |
+| WorkOS | Not used: the app has no end users to authenticate | skipped |
+| CopilotKit | Not used: would fight the custom office frontend rather than help it | skipped |
+| CodeRabbit | Not used: reviewing agent-generated code as a scoring input is a good fit but needs a GitHub PR pipeline we do not have | skipped, worth naming in the writeup |
+
+**Revisit this table if the Hackers Resources page lists per-sponsor prize
+categories.** Separate bounties would make shallow integrations worth their cost,
+which inverts the reasoning above.
+
 ## Build order
 
 Agree the `AgentEvent` shape first. Then nobody blocks.
