@@ -162,9 +162,10 @@ function arenaTools(agentId: AgentId, arena: Arena, deps: AgentDeps) {
 
       tool(
         'share_file',
-        'Copy a file from your sandbox into a teammate\'s sandbox at the same path. This is how ' +
-          'a team assembles its ONE project: build your piece, then ship the file to whoever is ' +
-          'integrating. Teammates only.',
+        'Deliver a file from your sandbox to a teammate. It lands in their sandbox under ' +
+          'incoming/<your-name>/<path>, never on top of their own work, so the integrator merges ' +
+          'deliberately instead of discovering their tested file was overwritten. This is how a ' +
+          'team assembles its ONE project. Teammates only.',
         {
           path: z.string().describe('Relative path in your sandbox, e.g. app/style.css'),
           to: z.enum(AGENT_IDS).describe('The teammate to deliver it to'),
@@ -178,13 +179,23 @@ function arenaTools(agentId: AgentId, arena: Arena, deps: AgentDeps) {
           if (!team) return err('You are not on a team yet. Files only move between teammates.')
           if (!team.members.includes(to)) return err(`${to} is not on ${team.id}. Files only move between teammates.`)
 
+          /**
+           * Delivery is namespaced by sender rather than written at the same
+           * path. Writing in place let one teammate silently overwrite the
+           * integrator's tested index.html, and two agents sharing the same
+           * path to each other traded byte-identical files without noticing.
+           * Both happened in a live round. Landing under incoming/<from>/
+           * makes every merge an explicit act.
+           */
+          const dest = `incoming/${agentId}/${path.replace(/^[~/]+/, '')}`
+
           try {
             const bytes = await box().read(path)
-            await arena.sandboxFor(to).writeBytes(path, bytes)
+            await arena.sandboxFor(to).writeBytes(dest, bytes)
 
             arena.emit({ agentId, kind: 'build', body: `sent ${path} (${bytes.length}b) to ${to}` })
-            inbox?.post(to, agentId, `I put ${path} (${bytes.length} bytes) into your sandbox.`)
-            return ok(`${path} delivered into ${to}'s sandbox.`)
+            inbox?.post(to, agentId, `I delivered ${path} (${bytes.length} bytes). It is at ~/${dest} in your sandbox, not merged into your files.`)
+            return ok(`Delivered to ${to} at ~/${dest}. It did not overwrite their copy.`)
           } catch (e) {
             return err((e as Error).message)
           }
@@ -454,6 +465,11 @@ judged as one entry: only the first submission from a team is accepted. Each tea
 own sandbox, so agree roles over send_message: one integrator owns the final page and submits it;
 everyone else builds a piece of it (a feature, the styling, the copy, testing) and delivers their
 files to the integrator with share_file. Do not each build your own separate page.
+
+Delivered files land under ~/incoming/<sender>/ and never overwrite your own. If you are the
+integrator, read them and merge the parts you want into your page yourself. Submit early once
+you have something that works, then keep improving and submit again: only your team's first
+accepted submission counts as the entry, and a teammate submitting first locks it.
 
 The brief:
   ${TOPIC}
