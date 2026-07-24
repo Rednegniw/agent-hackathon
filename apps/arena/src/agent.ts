@@ -40,11 +40,12 @@ function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster, inbox?: 
   }
 
   /**
-   * A team shares one sandbox: its owner's. Every member's bash, write and
-   * submit therefore resolve to the same box, which is what makes a team ship
-   * one artifact rather than three. Solo agents resolve to their own.
+   * Every agent gets its own sandbox, teammates included. Sharing one box meant
+   * two agents overwriting each other's files and fighting for port 3000 inside
+   * it. Teams coordinate by messaging instead, which is the whole point of
+   * having a delivery channel.
    */
-  const box = () => arena.sandboxFor(teams?.teamOf(agentId)?.owner ?? agentId)
+  const box = () => arena.sandboxFor(agentId)
 
   return createSdkMcpServer({
     name: SERVER,
@@ -75,7 +76,7 @@ function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster, inbox?: 
           'cd ~/app && nohup python3 -m http.server 3000 >/tmp/serve.log 2>&1 & sleep 1; echo up',
         { command: z.string().describe('The shell command to run') },
         async ({ command }) => {
-          const blocked = gate('sandbox_bash', ['build'])
+          const blocked = gate('sandbox_bash', ['build', 'submit'])
           if (blocked) return err(blocked)
 
           arena.emit({ agentId, kind: 'build', body: command.slice(0, 200) })
@@ -89,14 +90,14 @@ function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster, inbox?: 
 
       tool(
         'sandbox_write',
-        'Write a file into your sandbox, overwriting it if it exists. Paths are relative to your ' +
-          'home directory, so use "app/index.html" to create ~/app/index.html.',
+        'Write a file into your own sandbox, overwriting it if it exists. Paths are relative to ' +
+          'your home directory, so "app/index.html" creates ~/app/index.html.',
         {
           path: z.string().describe('Relative path, e.g. app/index.html'),
           content: z.string().describe('The complete file contents'),
         },
         async ({ path, content }) => {
-          const blocked = gate('sandbox_write', ['build'])
+          const blocked = gate('sandbox_write', ['build', 'submit'])
           if (blocked) return err(blocked)
 
           try {
@@ -157,8 +158,9 @@ function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster, inbox?: 
 
       tool(
         'submit',
-        'Submit your finished project. Only call this once your server is actually serving. ' +
-          'The URL is health-checked, and submitting a dead server scores zero.',
+        'Submit your finished project. Call this once your server is actually serving. ' +
+          'The URL is health-checked before it is accepted, so a dead server is rejected and ' +
+          'you can fix it and submit again.',
         {
           port: z.number().int().min(3000).max(9999),
           title: z.string(),
@@ -193,6 +195,10 @@ ${PERSONAS[id]}
 
 You have your own isolated Linux sandbox. sandbox_bash and sandbox_write are the ONLY way to touch
 it. You have no other file or shell access.
+
+You may be put on a team. If you are, you will be told who with. Teammates are judged together as a
+single entry but each has their own sandbox, so use send_message to agree who builds what rather
+than duplicating each other's work.
 
 The brief:
 ${describeTopic()}

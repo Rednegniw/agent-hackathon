@@ -52,8 +52,27 @@ clock.onPhase(async (phase) => {
 
     if (teams) {
       const settled = teams.settle(ROSTER)
+
       for (const t of settled) {
-        log.emit({ agentId: t.owner, kind: 'team', body: `${t.id}: ${t.members.join(', ')} (owner ${t.owner})` })
+        log.emit({ agentId: t.owner, kind: 'team', body: `${t.id}: ${t.members.join(', ')}` })
+
+        /**
+         * Tell every member, or an agent auto-grouped by settle() never finds
+         * out it has teammates: it was only ever told it works alone, and the
+         * team exists purely in the orchestrator's head.
+         */
+        if (t.members.length > 1) {
+          for (const m of t.members) {
+            const others = t.members.filter((x) => x !== m)
+            inbox.post(
+              m,
+              t.owner,
+              `You are on ${t.id} with ${others.join(' and ')}. You are judged together as one ` +
+                `entry, but you each have your own sandbox, so agree who builds what and do not ` +
+                `duplicate each other. Message them now.`,
+            )
+          }
+        }
       }
       console.log(`[teams]\n${teams.describe()}`)
     }
@@ -98,6 +117,8 @@ const main = async () => {
 
       await logToBraintrust(verdicts, log.all())
     }
+
+    await clock.finish()
 
     log.emit({ agentId: 'system', kind: 'score', body: `round complete, ${subs.length}/${ROSTER.length} submitted` })
     console.log(`[real] ${log.all().length} events -> ${log.file}`)

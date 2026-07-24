@@ -78,15 +78,27 @@ function extractJson<T>(text: string): T | null {
   }
 }
 
+/**
+ * Never throws. The evaluator round opens roughly sixteen fresh sessions back
+ * to back, immediately after the agents have hammered the same account all
+ * round, so a transient rate limit is likely rather than exotic. An unhandled
+ * rejection here would kill the process at the finale, after the build already
+ * succeeded and before any winner was crowned. An empty string instead flows
+ * into the existing abstain path.
+ */
 async function ask(prompt: string, system: string, maxTurns = 2): Promise<string> {
   let out = ''
-  for await (const msg of query({
-    prompt,
-    options: { model: MODEL, systemPrompt: system, tools: [], maxTurns },
-  })) {
-    if (msg.type === 'assistant') {
-      for (const b of msg.message.content) if (b.type === 'text') out += b.text
+  try {
+    for await (const msg of query({
+      prompt,
+      options: { model: MODEL, systemPrompt: system, tools: [], maxTurns },
+    })) {
+      if (msg.type === 'assistant') {
+        for (const b of msg.message.content) if (b.type === 'text') out += b.text
+      }
     }
+  } catch (err) {
+    console.warn('[judge] query failed:', (err as Error).message)
   }
   return out
 }
@@ -139,13 +151,22 @@ async function scoreOne(
    * Retry once, then abstain.
    */
   if (!parsed) {
+    /**
+     * The retry is a fresh session with no memory of the first, so it must
+     * restate the rubric. Without it the model answers something plausible
+     * like {"score": 8}, which parses but contains none of the criteria keys
+     * and lands right back on 0/30, defeating the point of retrying.
+     */
     const retry = await ask(
-      `Your last reply was not valid JSON. Reply with ONLY the JSON object, nothing else.\n\n` +
-        `Agent: ${trace.agentId}\nPresentation: ${speech}`,
+      `Reply with ONLY this JSON object and nothing else:\n{\n${rubric}\n  "comment": "one sentence"\n}\n\n` +
+        `Entry: ${entry.label}\nPresentation: ${speech}`,
       `You are ${judge.id}. ${judge.lens}`,
     )
     parsed = extractJson<Record<string, number | string>>(retry)
   }
+
+  // A parse that contains none of the criteria is not a score. Abstain.
+  if (parsed && !CRITERIA.some((c) => c.key in parsed!)) parsed = null
 
   if (!parsed) {
     console.warn(`[judge] ${judge.id} could not score ${entry.label}, abstaining`)

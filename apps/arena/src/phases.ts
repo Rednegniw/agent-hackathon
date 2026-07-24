@@ -92,6 +92,17 @@ export class PhaseClock {
       await this.#enter(step.phase)
       await sleep(step.ms)
     }
+
+    /**
+     * Judging is a phase the office can render, not dead time after the round.
+     * run() stops here; the caller drives the evaluator round and then calls
+     * finish(), so /state reports 'judging' for the minutes it actually takes.
+     */
+    await this.#enter('judging')
+  }
+
+  /** Closes the round once judging has produced a winner. */
+  async finish() {
     await this.#enter('judged')
   }
 
