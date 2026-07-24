@@ -105,6 +105,7 @@ export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 /** What each phase permits. The tool layer enforces this, the arena reports it. */
 export const ALLOWED: Record<Phase, string[]> = {
   idle: [],
+  judging: [],
   mingle: ['pick_theme', 'send_message'],
   build: ['sandbox_bash', 'sandbox_write', 'send_message'],
   submit: ['submit'],
