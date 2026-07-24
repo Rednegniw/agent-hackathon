@@ -1,0 +1,20 @@
+{
+  "name": "agent-hackathon",
+  "version": "1.0.0",
+  "scripts": {
+    "smoke": "node smoke.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rednegniw/agent-hackathon.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Rednegniw/agent-hackathon/issues"
+  },
+  "homepage": "https://github.com/Rednegniw/agent-hackathon#readme",
+  "dependencies": {
+    "@daytonaio/sdk": "^0.200.1",
+    "dotenv": "^17.4.2"
+  },
+  "type": "module"
+}
