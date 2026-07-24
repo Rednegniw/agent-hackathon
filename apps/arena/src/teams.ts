@@ -30,6 +30,7 @@ export interface Team {
 export class TeamRoster {
   #teams = new Map<string, Team>()
   #of = new Map<AgentId, string>()
+  #submitter = new Map<string, AgentId>()
   #next = 1
 
   teams(): Team[] {
@@ -44,6 +45,22 @@ export class TeamRoster {
   /** The member who speaks for the team. */
   isOwner(agentId: AgentId): boolean {
     return this.teamOf(agentId)?.owner === agentId
+  }
+
+  /**
+   * A team ships ONE project. The first member whose submission is accepted
+   * becomes the team's submitter; everyone else is refused and told who holds
+   * it. Checked before the health check and recorded only after it passes, so
+   * a dead server never locks a team out of shipping.
+   */
+  submitterOf(agentId: AgentId): AgentId | undefined {
+    const team = this.teamOf(agentId)
+    return team ? this.#submitter.get(team.id) : undefined
+  }
+
+  recordSubmit(agentId: AgentId): void {
+    const team = this.teamOf(agentId)
+    if (team && !this.#submitter.has(team.id)) this.#submitter.set(team.id, agentId)
   }
 
   /**

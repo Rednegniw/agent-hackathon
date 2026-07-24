@@ -24,6 +24,7 @@ export const ARENA_TOOLS = [
   'form_team',
   'sandbox_bash',
   'sandbox_write',
+  'share_file',
   'send_message',
   'submit',
   'capture_screens',
@@ -160,9 +161,41 @@ function arenaTools(agentId: AgentId, arena: Arena, deps: AgentDeps) {
       ),
 
       tool(
+        'share_file',
+        'Copy a file from your sandbox into a teammate\'s sandbox at the same path. This is how ' +
+          'a team assembles its ONE project: build your piece, then ship the file to whoever is ' +
+          'integrating. Teammates only.',
+        {
+          path: z.string().describe('Relative path in your sandbox, e.g. app/style.css'),
+          to: z.enum(AGENT_IDS).describe('The teammate to deliver it to'),
+        },
+        async ({ path, to }) => {
+          const blocked = gate('share_file', ['build', 'submit'])
+          if (blocked) return err(blocked)
+          if (to === agentId) return err('That is your own sandbox.')
+
+          const team = teams?.teamOf(agentId)
+          if (!team) return err('You are not on a team yet. Files only move between teammates.')
+          if (!team.members.includes(to)) return err(`${to} is not on ${team.id}. Files only move between teammates.`)
+
+          try {
+            const bytes = await box().read(path)
+            await arena.sandboxFor(to).writeBytes(path, bytes)
+
+            arena.emit({ agentId, kind: 'build', body: `sent ${path} (${bytes.length}b) to ${to}` })
+            inbox?.post(to, agentId, `I put ${path} (${bytes.length} bytes) into your sandbox.`)
+            return ok(`${path} delivered into ${to}'s sandbox.`)
+          } catch (e) {
+            return err((e as Error).message)
+          }
+        },
+      ),
+
+      tool(
         'form_team',
-        `Team up with other agents. Teams hold ${TEAM_MIN} to ${TEAM_MAX} agents and are judged ` +
-          `together as one entry. You each keep your own sandbox, so agree who builds what. ` +
+        `Team up with other agents. Teams hold ${TEAM_MIN} to ${TEAM_MAX} agents and ship ONE ` +
+          `project as one entry. You each keep your own sandbox, so agree an integrator who owns ` +
+          `the final page and submits; the rest build pieces and deliver them with share_file. ` +
           `Talk to the others with send_message first, then whoever is agreed calls this once ` +
           `naming everyone. Anyone still teamless when mingle ends is grouped automatically.`,
         { members: z.array(z.string()).describe('Every agent on the team, including yourself') },
@@ -183,7 +216,7 @@ function arenaTools(agentId: AgentId, arena: Arena, deps: AgentDeps) {
 
           // Tell the others, or they are on a team they never heard about.
           for (const m of others) {
-            inbox?.post(m, agentId, `I formed ${res.team.id} with ${res.team.members.join(', ')}. We are judged as one entry, so let us split the work.`)
+            inbox?.post(m, agentId, `I formed ${res.team.id} with ${res.team.members.join(', ')}. We ship ONE project as one entry: let us pick an integrator and split the pieces.`)
           }
           return ok(`Formed ${res.team.id} with ${res.team.members.join(', ')}. You own the sandbox.`)
         },
@@ -219,8 +252,22 @@ function arenaTools(agentId: AgentId, arena: Arena, deps: AgentDeps) {
           const blocked = gate('submit', ['build', 'submit'])
           if (blocked) return err(blocked)
 
+          /**
+           * One entry per team. The first accepted submission locks it; a
+           * teammate trying afterwards is redirected to share_file, because
+           * ten agents shipping ten solo pages is not a team round.
+           */
+          const holder = teams?.submitterOf(agentId)
+          if (holder && holder !== agentId) {
+            return err(
+              `Your team already shipped: ${holder} submitted the team's entry. ` +
+                `Send improvements to ${holder} with share_file instead.`,
+            )
+          }
+
           try {
             const url = await box().preview(port)
+            teams?.recordSubmit(agentId)
             arena.emit({
               agentId,
               kind: 'submit',
@@ -402,9 +449,11 @@ ${PERSONAS[id]}
 You have your own isolated Linux sandbox. sandbox_bash and sandbox_write are the ONLY way to touch
 it. You have no other file or shell access.
 
-You may be put on a team. If you are, you will be told who with. Teammates are judged together as a
-single entry but each has their own sandbox, so use send_message to agree who builds what rather
-than duplicating each other's work.
+You may be put on a team. If you are, you will be told who with. A team ships ONE project and is
+judged as one entry: only the first submission from a team is accepted. Each teammate has their
+own sandbox, so agree roles over send_message: one integrator owns the final page and submits it;
+everyone else builds a piece of it (a feature, the styling, the copy, testing) and delivers their
+files to the integrator with share_file. Do not each build your own separate page.
 
 The brief:
   ${TOPIC}

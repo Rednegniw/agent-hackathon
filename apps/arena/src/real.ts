@@ -85,9 +85,10 @@ clock.onPhase(async (phase) => {
             inbox.post(
               m,
               t.owner,
-              `You are on ${t.id} with ${others.join(' and ')}. You are judged together as one ` +
-                `entry, but you each have your own sandbox, so agree who builds what and do not ` +
-                `duplicate each other. Message them now.`,
+              `You are on ${t.id} with ${others.join(' and ')}. Your team ships ONE project and ` +
+                `only its first submission counts, so message them now: pick an integrator to own ` +
+                `the final page and submit it, and split the pieces. Deliver your piece to the ` +
+                `integrator with share_file.`,
             )
           }
         }
