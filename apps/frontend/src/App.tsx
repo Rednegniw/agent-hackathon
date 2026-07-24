@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { AgentId } from './arena'
+import type { AgentId, AgentKind } from './arena'
 import { CAST } from './roster'
 import { useArena, type Submission } from './useArena'
 import Room from './office/Room'
@@ -26,6 +26,8 @@ export default function App() {
   /** Kept here so Restart can re-run whatever the operator last chose. */
   const [arena, setArena] = useState<'fake' | 'daytona'>('daytona')
   const [speed, setSpeed] = useState(25)
+  const [agents, setAgents] = useState<AgentKind>('real')
+  const [agentCount, setAgentCount] = useState(6)
 
   const [openAgent, setOpenAgent] = useState<AgentId | null>(null)
   const [expanded, setExpanded] = useState<Submission | null>(null)
@@ -108,7 +110,7 @@ export default function App() {
     seenThought.current.clear()
     seenMessage.current.clear()
     setBubbles({})
-    void start(arena, speed)
+    void start({ arena, speed, agents, agentCount })
   }
 
   const tray = (
@@ -144,8 +146,12 @@ export default function App() {
           error={error ?? status?.error ?? null}
           arena={arena}
           speed={speed}
+          agents={agents}
+          agentCount={agentCount}
           onArena={setArena}
           onSpeed={setSpeed}
+          onAgents={setAgents}
+          onAgentCount={setAgentCount}
           onStart={start}
         />
       )}

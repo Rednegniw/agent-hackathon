@@ -42,11 +42,31 @@ export type StartAck =
   /** 400 means the payload was wrong, 409 that a round is already running. */
   | { ok: false; reason: string; status?: 400 | 409 }
 
-export async function startRound(arena: 'fake' | 'daytona', speed: number): Promise<StartAck> {
+export type AgentKind = 'scripted' | 'real'
+
+export interface StartRequest {
+  arena: 'fake' | 'daytona'
+  speed: number
+  agents: AgentKind
+  agentCount: number
+}
+
+export async function startRound(req: StartRequest): Promise<StartAck> {
   const res = await fetch(`${ARENA_URL}/start`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ arena, speed }),
+
+    /**
+     * `speed` is only honoured when the server gets no explicit durations, and
+     * a real round needs the long ones. Sending it for a scripted round keeps
+     * the slider meaningful; omitting it for a real one lets REAL_DURATIONS
+     * apply, which is what a CLI round uses.
+     */
+    body: JSON.stringify(
+      req.agents === 'real'
+        ? { arena: req.arena, agents: req.agents, agentCount: req.agentCount }
+        : { arena: req.arena, agents: req.agents, agentCount: req.agentCount, speed: req.speed },
+    ),
   })
 
   // 409 carries a real reason ("a round is already running"), so parse either way.
