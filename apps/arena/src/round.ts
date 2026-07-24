@@ -3,6 +3,7 @@ import type { BaseArena } from './arena-base.js'
 import { DaytonaArena, KEEP_ALIVE } from './arena-daytona.js'
 import { FakeArena } from './arena-fake.js'
 import { AGENT_IDS, type AgentId, type Phase } from './events.js'
+import { runEvaluation } from './judge.js'
 import type { EventLog } from './log.js'
 import { PhaseClock, defaultDurations, sequenceOf, sleep, type Durations } from './phases.js'
 import { canFilm, captureShots, recordPitch, type ShotSpec } from './studio.js'
@@ -402,6 +403,27 @@ export class RoundRunner {
        */
       await this.#fillMissingPitches(arena, roundId)
 
+      /**
+       * The evaluator round, then close the clock.
+       *
+       * Both halves are load-bearing. PhaseClock.run() deliberately stops at
+       * 'judging' and waits for its caller to drive the evaluation, so a
+       * runner that never judges leaves /state reporting 'judging' forever —
+       * the office shows "Round over · judging" and never reaches the
+       * verdicts, the ranking or the crown. real.ts already did this; the
+       * office's own runner did not, so nothing started from the Start button
+       * was ever judged.
+       */
+      if (process.env.SKIP_JUDGING !== '1') {
+        try {
+          const { winner } = await runEvaluation(this.#log.all(), arena)
+          if (winner) console.log(`[round ${roundId}] winner: ${winner.agentId} (${winner.total})`)
+        } catch (err) {
+          console.error(`[round ${roundId}] judging failed:`, (err as Error).message)
+          this.#log.emit({ agentId: 'system', kind: 'score', body: `judging failed: ${(err as Error).message}` })
+        }
+      }
+
       this.#log.emit({ agentId: 'system', kind: 'score', body: 'round complete' })
       this.#state = 'done'
     } catch (err) {
@@ -410,6 +432,18 @@ export class RoundRunner {
       this.#state = 'failed'
     } finally {
       this.#finishedAt = Date.now()
+
+      /**
+       * In the finally, not the happy path: run() parks the clock on 'judging'
+       * and only finish() moves it on, so a round that threw anywhere above
+       * would otherwise leave the office reporting judging forever with no
+       * round running to end it.
+       */
+      try {
+        await clock.finish()
+      } catch (err) {
+        console.error(`[round ${roundId}] could not close the clock:`, (err as Error).message)
+      }
 
       /**
        * Teardown always runs, even on failure. Without it a failed round leaks
