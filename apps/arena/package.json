@@ -8,6 +8,7 @@
     "dev:fast": "ROUND_SPEED=40 tsx src/dev.ts",
     "typecheck": "tsc --noEmit",
     "smoke": "node smoke.mjs",
+    "smoke:studio": "tsx src/smoke-studio.ts",
     "cleanup": "tsx src/cleanup.ts",
     "real": "tsx src/real.ts",
     "replay": "tsx src/replay.ts"

@@ -26,6 +26,17 @@ export interface ArenaStatus {
 
 export const ARENA_URL = import.meta.env.VITE_ARENA_URL ?? 'http://localhost:4000'
 
+/**
+ * Pitch videos are served by the arena, which emits a path rather than an
+ * absolute URL because it does not know which host the office reached it on.
+ * Prefix here, where that is known.
+ *
+ * Unlike a preview URL these outlive the sandbox — the media is copied out
+ * before teardown — so a pitch still plays after the round is over.
+ */
+export const mediaUrl = (path?: string): string | undefined =>
+  !path ? undefined : path.startsWith('/') ? `${ARENA_URL}${path}` : path
+
 export type StartAck =
   | { ok: true; roundId: string }
   /** 400 means the payload was wrong, 409 that a round is already running. */

@@ -26,6 +26,16 @@ export interface Submission {
   title: string
   previewUrl?: string
   seq: number
+
+  /**
+   * The agent's own narrated product video, filmed in its sandbox during the
+   * submit phase. Arrives on a later 'pitch' event than the submission, so it
+   * is stitched on after the fold rather than read off the submit event.
+   */
+  videoUrl?: string
+  posterUrl?: string
+  /** Title and tagline the agent gave the product when it filmed. */
+  pitchTitle?: string
 }
 
 export interface JurorVerdict {
@@ -65,6 +75,7 @@ const STATUS_BY_KIND: Partial<Record<AgentEvent['kind'], AgentStatus>> = {
   build: 'working',
   team: 'thinking',
   submit: 'shipped',
+  pitch: 'shipped',
   present: 'reviewing',
 }
 
@@ -150,6 +161,21 @@ export function fold(events: AgentEvent[]): Fold {
           })
         }
         break
+
+      /**
+       * Filmed after submitting, so the submission it belongs to already
+       * exists. Matched on agent rather than seq for that reason.
+       */
+      case 'pitch': {
+        if (e.agentId === 'system') break
+        const sub = out.submissions.find((s) => s.agentId === e.agentId)
+        if (sub) {
+          sub.videoUrl = e.videoUrl
+          sub.posterUrl = e.posterUrl
+          sub.pitchTitle = e.body
+        }
+        break
+      }
 
       case 'present':
         if (e.agentId !== 'system') {

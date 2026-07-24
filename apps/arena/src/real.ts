@@ -111,7 +111,12 @@ const main = async () => {
     await Promise.all([
       clock.run(),
       ...ROSTER.map((id) =>
-        runAgent(id, arena, ROSTER.filter((o) => o !== id), MODEL, MAX_TURNS, teams, inbox, roundIsOpen).catch((e) => {
+        runAgent(id, arena, ROSTER.filter((o) => o !== id), MODEL, MAX_TURNS, {
+          teams,
+          inbox,
+          isOpen: roundIsOpen,
+          roundId: runId,
+        }).catch((e) => {
           console.error(`[${id}] crashed:`, e.message)
           log.emit({ agentId: id, kind: 'thought', body: `crashed: ${e.message}` })
         }),

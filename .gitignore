@@ -20,3 +20,8 @@ build/
 *.log
 npm-debug.log*
 runs/
+
+# Rendered pitch videos, one directory per round. Regenerated every run, so
+# they are noise — except for the round you demo from. Commit that one round's
+# directory deliberately with `git add -f`, the same way runs/ works.
+apps/arena/public/media/

@@ -23,6 +23,12 @@ export const KEEP_ALIVE = process.env.KEEP_ALIVE === '1'
  */
 export const TTL_MINUTES = Number(process.env.SANDBOX_TTL_MINUTES ?? 180)
 
+/**
+ * Paths are relative to /home/daytona. Strip a leading ~ or / so an agent
+ * writing "/app/index.html" does not escape to the real root.
+ */
+const remotePath = (path: string) => path.replace(/^[~/]+/, '')
+
 class DaytonaSandbox implements AgentSandbox {
   constructor(
     private sandbox: Sandbox,
@@ -51,12 +57,15 @@ class DaytonaSandbox implements AgentSandbox {
   }
 
   async write(path: string, content: string): Promise<void> {
-    /**
-     * Paths are relative to /home/daytona. Strip a leading ~ or / so an
-     * agent writing "/app/index.html" does not escape to the real root.
-     */
-    const remote = path.replace(/^[~/]+/, '')
-    await this.sandbox.fs.uploadFile(Buffer.from(content, 'utf8'), remote)
+    await this.writeBytes(path, Buffer.from(content, 'utf8'))
+  }
+
+  async writeBytes(path: string, content: Uint8Array): Promise<void> {
+    await this.sandbox.fs.uploadFile(Buffer.from(content), remotePath(path))
+  }
+
+  async read(path: string): Promise<Uint8Array> {
+    return new Uint8Array(await this.sandbox.fs.downloadFile(remotePath(path)))
   }
 
   async preview(port: number): Promise<string> {
@@ -74,8 +83,15 @@ export class DaytonaArena extends BaseArena {
   #daytona: Daytona
   #pool = new Map<AgentId, DaytonaSandbox>()
   #runId: string
+  #keepAlive: boolean
 
-  constructor(log: EventLog, clock: PhaseClock, runId: string) {
+  /**
+   * `keepAlive` defaults to the KEEP_ALIVE env var so command-line runs are
+   * unchanged, but it is per-instance because a round started from the office
+   * decides this per round: teardown deletes the sandboxes behind the preview
+   * URLs, so a round you intend to click through has to opt out of it.
+   */
+  constructor(log: EventLog, clock: PhaseClock, runId: string, keepAlive = KEEP_ALIVE) {
     super(log, clock)
 
     const apiKey = process.env.DAYTONA_API_KEY
@@ -83,6 +99,11 @@ export class DaytonaArena extends BaseArena {
 
     this.#daytona = new Daytona({ apiKey })
     this.#runId = runId
+    this.#keepAlive = keepAlive
+  }
+
+  get keepAlive(): boolean {
+    return this.#keepAlive
   }
 
   /**
@@ -124,14 +145,14 @@ export class DaytonaArena extends BaseArena {
           labels: { round: this.#runId, agent: id },
 
           // ephemeral deletes on stop; autoStopInterval is in MINUTES.
-          ephemeral: !KEEP_ALIVE,
-          autoStopInterval: KEEP_ALIVE ? 0 : 30,
+          ephemeral: !this.#keepAlive,
+          autoStopInterval: this.#keepAlive ? 0 : 30,
 
           /**
            * The backstop that makes cleanup unconditional. ttlMinutes is
            * wall-clock since creation and destroys the sandbox even if it is
            * stopped, paused or archived, so nothing survives a killed process,
-           * a crashed teardown, or a KEEP_ALIVE round nobody reclaimed.
+           * a crashed teardown, or a keep-alive round nobody reclaimed.
            * Without it orphans accumulate silently until the account's vCPU
            * cap fails an entire round at once.
            */
@@ -156,7 +177,7 @@ export class DaytonaArena extends BaseArena {
 
     console.log(
       `[daytona] ${ready.length}/${agentIds.length} sandboxes in ${Date.now() - started}ms` +
-        (KEEP_ALIVE ? ' (KEEP_ALIVE: they will outlive this process)' : ''),
+        (this.#keepAlive ? ' (keep-alive: they will outlive this round)' : ''),
     )
     return ready
   }
@@ -168,7 +189,9 @@ export class DaytonaArena extends BaseArena {
    * catch; ttlMinutes covers SIGKILL and crashes, which we cannot.
    */
   installExitGuards(): void {
-    if (KEEP_ALIVE) return
+    // Per-round, not the env var: a keep-alive round wants to survive the
+    // process exiting, which is the whole reason its URLs stay clickable.
+    if (this.#keepAlive) return
 
     let running = false
     const bail = async (signal: string) => {
@@ -209,10 +232,11 @@ export class DaytonaArena extends BaseArena {
   }
 
   async teardown() {
-    if (KEEP_ALIVE) {
+    if (this.#keepAlive) {
       const ids = [...this.#pool.values()].map((s) => s.id)
-      console.log(`[daytona] KEEP_ALIVE set, leaving ${ids.length} sandboxes running.`)
-      console.log(`[daytona] clean up later by label round=${this.#runId}`)
+      console.log(`[daytona] keep-alive set, leaving ${ids.length} sandboxes running.`)
+      console.log(`[daytona] preview URLs stay live. Clean up with:`)
+      console.log(`[daytona]   pnpm --filter arena cleanup ${this.#runId}`)
       return
     }
 

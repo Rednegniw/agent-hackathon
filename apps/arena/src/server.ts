@@ -2,6 +2,7 @@ import express from 'express'
 import { join } from 'node:path'
 import type { AgentEvent } from './events.js'
 import type { EventLog } from './log.js'
+import { MEDIA_DIR } from './media.js'
 
 export interface ServerDeps {
   log: EventLog
@@ -98,6 +99,13 @@ export function startServer(deps: ServerDeps, port = Number(process.env.PORT ?? 
     })
   })
 
+  /**
+   * Pitch videos, resolved against the module rather than cwd so the same
+   * files are served whether the arena was started from the repo root or from
+   * its own package. These outlive the round: the media is copied out of the
+   * sandbox before teardown, so a video still plays after its sandbox is gone.
+   */
+  app.use('/media', express.static(MEDIA_DIR, { maxAge: '1h' }))
   app.use(express.static(join(process.cwd(), 'public')))
 
   const server = app.listen(port, () => {

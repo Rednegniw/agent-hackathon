@@ -3,6 +3,7 @@ import type { AgentId } from '../arena'
 import { CAST } from '../roster'
 import type { Fold, Submission } from '../useArena'
 import Preview from './Preview'
+import Pitch from './Pitch'
 
 /**
  * The judging surface: the 404px panel inset from the top-left of the canvas,
@@ -36,6 +37,13 @@ export default function SubmissionPanel({
 
   const clamped = Math.min(index, Math.max(0, submissions.length - 1))
   const current = submissions[clamped]
+
+  /**
+   * The pitch leads when there is one. It is the agent's own account of what
+   * it built, in its own voice, and it reads in twenty seconds — the live app
+   * is one tap away and stays the thing you poke at.
+   */
+  const [tab, setTab] = useState<'pitch' | 'app'>('pitch')
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -77,11 +85,30 @@ export default function SubmissionPanel({
       </div>
 
       <div className="sheet-body">
-        <Preview
-          url={current.previewUrl}
-          title={`${current.agentId}'s app`}
-          onExpand={() => onExpand(current)}
-        />
+        {current.videoUrl && (
+          <div className="seg-row">
+            <button className={tab === 'pitch' ? 'on' : ''} onClick={() => setTab('pitch')}>
+              Pitch
+            </button>
+            <button className={tab === 'app' ? 'on' : ''} onClick={() => setTab('app')}>
+              Live app
+            </button>
+          </div>
+        )}
+
+        {current.videoUrl && tab === 'pitch' ? (
+          <Pitch
+            videoUrl={current.videoUrl}
+            posterUrl={current.posterUrl}
+            agentId={current.agentId}
+          />
+        ) : (
+          <Preview
+            url={current.previewUrl}
+            title={`${current.agentId}'s app`}
+            onExpand={() => onExpand(current)}
+          />
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div className="plate-art" style={{ position: 'relative', width: 30, height: 30, borderRadius: 8 }}>
@@ -103,6 +130,7 @@ export default function SubmissionPanel({
           )}
           <span className="tag tag-accent-2">Shipped</span>
           {current.previewUrl && <span className="tag tag-outline">Live preview</span>}
+          {current.videoUrl && <span className="tag tag-outline">Filmed its own pitch</span>}
         </div>
       </div>
 

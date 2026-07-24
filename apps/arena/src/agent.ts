@@ -6,6 +6,17 @@ import type { Inbox } from './inbox.js'
 import { refuse } from './phases.js'
 import { TOPIC } from './topic.js'
 import { TEAM_MAX, TEAM_MIN, type TeamRoster } from './teams.js'
+import {
+  MAX_SHOTS,
+  MAX_SLIDES,
+  NO_STUDIO,
+  VIEWPORTS,
+  canFilm,
+  captureShots,
+  recordPitch,
+  slug,
+  type ShotSpec,
+} from './studio.js'
 
 /** Tool names as Claude sees them: mcp__{server}__{tool}. */
 const SERVER = 'arena'
@@ -15,6 +26,8 @@ export const ARENA_TOOLS = [
   'sandbox_write',
   'send_message',
   'submit',
+  'capture_screens',
+  'record_pitch',
 ].map((t) => `mcp__${SERVER}__${t}`)
 
 export { TOPIC }
@@ -37,8 +50,56 @@ export const PERSONAS: Record<AgentId, string> = {
 const ok = (text: string) => ({ content: [{ type: 'text' as const, text }] })
 const err = (text: string) => ({ content: [{ type: 'text' as const, text }], isError: true })
 
-/** The five tools. Every one is phase-gated by the arena, not by the prompt. */
-function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster, inbox?: Inbox) {
+/** What an agent run needs beyond the arena itself. All of it optional. */
+export interface AgentDeps {
+  teams?: TeamRoster
+  inbox?: Inbox
+
+  /** Keeps the conversation open so mid-run messages can be delivered. */
+  isOpen?: () => boolean
+
+  /**
+   * Where rendered pitch media is filed. Without it the studio tools are off,
+   * which is what a replay-only or media-less round wants.
+   */
+  roundId?: string
+}
+
+/**
+ * Parks until the submit phase begins. Returns null when it is time to film,
+ * or the reason it will never be.
+ *
+ * 'mingle' is refused outright rather than waited out: an agent trying to film
+ * before it has built anything has misread the round, and telling it so is
+ * more useful than silently swallowing several minutes of its turn.
+ */
+async function waitForSubmit(arena: Arena): Promise<string | null> {
+  const started = Date.now()
+
+  while (true) {
+    const phase = arena.phase()
+
+    if (phase === 'submit') return null
+    if (phase === 'mingle' || phase === 'idle') return refuse('record_pitch', phase)
+
+    if (phase !== 'build') {
+      return `The round has moved past filming (it is ${phase} now). Nothing more to do.`
+    }
+
+    /**
+     * A backstop, not the normal exit. The clock always leaves 'build', so
+     * this only fires if a round is wedged — and a tool call that never
+     * returns would hold the whole round open behind it.
+     */
+    if (Date.now() - started > 20 * 60_000) return 'Timed out waiting for the submit phase.'
+
+    await new Promise((r) => setTimeout(r, 1000))
+  }
+}
+
+/** Every tool is phase-gated by the arena, not by the prompt. */
+function arenaTools(agentId: AgentId, arena: Arena, deps: AgentDeps) {
+  const { teams, inbox, roundId } = deps
   const gate = (name: string, allowed: string[]) => {
     const phase = arena.phase()
     return allowed.includes(phase) ? null : refuse(name, phase)
@@ -166,9 +227,167 @@ function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster, inbox?: 
               body: pitch,
               previewUrl: url,
             })
-            return ok(`Submitted "${title}". Live at ${url}. You are done.`)
+            return ok(
+              `Submitted "${title}". Live at ${url}. ` +
+                `Now film your product: capture_screens, then record_pitch.`,
+            )
           } catch (e) {
             return err(`${(e as Error).message}. Fix your server, then submit again.`)
+          }
+        },
+      ),
+
+      tool(
+        'capture_screens',
+        'Screenshot your own running page with a real browser, and see the result. Give each ' +
+          'shot a label and the path to open, so you can capture more than one state — but only ' +
+          'states reachable by URL, since the browser opens the page and shoots it. If you want ' +
+          `a particular view filmed, make it reachable by path, query or hash. Up to ${MAX_SHOTS} shots.`,
+        {
+          port: z.number().int().min(3000).max(9999),
+          shots: z
+            .array(
+              z.object({
+                label: z.string().describe('Short name you will refer to this shot by, e.g. "home"'),
+                path: z.string().describe('Path on your own server, e.g. "/" or "/?tab=results"'),
+                viewport: z.enum(['desktop', 'mobile']).describe('desktop is 1440x900, mobile is 420x880'),
+              }),
+            )
+            .min(1),
+        },
+        async ({ port, shots }) => {
+          const blocked = gate('capture_screens', ['build', 'submit'])
+          if (blocked) return err(blocked)
+          if (!(await canFilm(box()))) return err(NO_STUDIO)
+
+          /**
+           * Labels become filenames and reach a shell, so they are narrowed
+           * rather than escaped, and de-duplicated: two shots with the same
+           * label would silently overwrite each other and the deck would show
+           * the same picture twice.
+           */
+          const seen = new Set<string>()
+          const specs: ShotSpec[] = []
+
+          for (const s of shots.slice(0, MAX_SHOTS)) {
+            let label = slug(s.label)
+            while (seen.has(label)) label = `${label}-2`
+            seen.add(label)
+
+            specs.push({
+              label,
+              path: s.path.startsWith('/') ? s.path : `/${s.path}`,
+              viewport: s.viewport in VIEWPORTS ? s.viewport : 'desktop',
+            })
+          }
+
+          try {
+            const taken = await captureShots(box(), `http://localhost:${port}`, specs)
+            const good = taken.filter((s) => !s.error)
+
+            arena.emit({
+              agentId,
+              kind: 'shot',
+              body: good.length
+                ? `captured ${good.map((s) => s.label).join(', ')}`
+                : 'no screenshot rendered',
+            })
+
+            /**
+             * The images go back to the agent, not just their filenames. An
+             * agent that can see what it shipped writes a pitch about the
+             * product in front of it rather than the one it meant to build.
+             */
+            const content: ({ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string })[] = [
+              {
+                type: 'text',
+                text: taken
+                  .map((s) => (s.error ? `${s.label}: FAILED — ${s.error}` : `${s.label}: captured (${s.viewport})`))
+                  .join('\n'),
+              },
+            ]
+
+            for (const s of taken) {
+              if (!s.thumb) continue
+              content.push({ type: 'text', text: `--- ${s.label} (${s.path}) ---` })
+              content.push({
+                type: 'image',
+                data: Buffer.from(s.thumb).toString('base64'),
+                mimeType: 'image/jpeg',
+              })
+            }
+
+            return { content }
+          } catch (e) {
+            return err((e as Error).message)
+          }
+        },
+      ),
+
+      tool(
+        'record_pitch',
+        'Film a narrated product video from the screenshots you captured. This is what the room ' +
+          'sees, so pitch the product, not the process: what it is, what it does, why it is worth ' +
+          `a look. Each slide is on screen for exactly as long as its narration takes to speak, and ` +
+          `the narration is read aloud in your own voice. ${MAX_SLIDES} slides at most; three is usually right. ` +
+          'Filming happens in the submit phase: call this whenever you are ready and it will hold ' +
+          'until then, so calling it early is safe and costs you nothing.',
+        {
+          title: z.string().describe('The product name'),
+          tagline: z.string().describe('One line on what it is. This opens the video, spoken.'),
+          slides: z
+            .array(
+              z.object({
+                shot: z.string().optional().describe('A label from capture_screens. Omit for a text-only slide.'),
+                headline: z.string().describe('A few words, large on screen'),
+                caption: z.string().optional().describe('One short supporting line'),
+                narration: z.string().describe('What is spoken over this slide. One or two sentences.'),
+              }),
+            )
+            .min(1),
+        },
+        async ({ title, tagline, slides }) => {
+          if (!roundId) return err('Pitch recording is disabled this round.')
+
+          /**
+           * Waits rather than refuses.
+           *
+           * An agent that finishes early submits, captures its screenshots and
+           * calls this while the clock still says 'build'. A refusal there is
+           * fatal in practice: there is no wait tool, so the agent has nothing
+           * left to do and simply stops — observed on the first real round,
+           * where a finished agent lost its pitch to the fallback with 90
+           * seconds of submit phase still to come.
+           *
+           * Blocking inside the tool call parks the agent until the phase it
+           * was told to film in, which is also the phase where the product is
+           * final.
+           */
+          const waited = await waitForSubmit(arena)
+          if (waited) return err(waited)
+
+          try {
+            const pitch = await recordPitch(box(), agentId, roundId, {
+              title,
+              tagline,
+              slides: slides.map((s) => ({ ...s, shot: s.shot ? slug(s.shot) : undefined })),
+            })
+
+            arena.emit({
+              agentId,
+              kind: 'pitch',
+              body: `${title} — ${tagline}`,
+              videoUrl: pitch.videoUrl,
+              posterUrl: pitch.posterUrl,
+            })
+
+            return ok(
+              `Filmed "${title}": ${pitch.seconds}s, ${slides.length + 1} slides, ` +
+                `${pitch.voiced ? 'narrated in your voice' : 'silent (no voice available)'}. ` +
+                `You are done — stop here.`,
+            )
+          } catch (e) {
+            return err(`${(e as Error).message}. Check your shot labels and try once more.`)
           }
         },
       ),
@@ -193,6 +412,10 @@ The brief:
 How the round works:
 1. Build a single self-contained page and serve it on port 3000.
 3. Verify it responds, then call submit with a one-sentence pitch.
+4. Then film it: capture_screens to photograph your own running product, and record_pitch to
+   turn those screenshots into a short narrated video. The room watches these videos, so this
+   is not paperwork — it is how your work gets seen. Do this even if you finish early:
+   record_pitch waits for the submit phase by itself, so there is never a reason to skip it.
 
 Rules that matter:
 - Build time is enforced. When it ends, your work stops wherever it is.
@@ -247,18 +470,17 @@ export async function runAgent(
   rivals: AgentId[],
   model: string,
   maxTurns: number,
-  teams?: TeamRoster,
-  inbox?: Inbox,
-  isOpen: () => boolean = () => false,
+  deps: AgentDeps = {},
 ): Promise<void> {
-  const opening = `The round has started. You are ${id}. Build something and submit it before time runs out.`
+  const { inbox, isOpen = () => false } = deps
+  const opening = `The round has started. You are ${id}. Build something, submit it, then film it before time runs out.`
 
   const res = query({
     prompt: inbox ? conversation(id, opening, inbox, isOpen) : opening,
     options: {
       model,
       systemPrompt: systemPrompt(id, rivals),
-      mcpServers: { [SERVER]: arenaTools(id, arena, teams, inbox) },
+      mcpServers: { [SERVER]: arenaTools(id, arena, deps) },
       allowedTools: ARENA_TOOLS,
 
       // Strips every built-in tool, so the agent cannot touch the orchestrator host.

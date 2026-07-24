@@ -32,6 +32,10 @@ document is right.
 | `getPreviewLink(port)` | `{ sandboxId, url, token }`. URL contains the sandbox UUID. **Returns 401 without the token header.** |
 | `getSignedPreviewUrl(port, expiresInSeconds?)` | `{ sandboxId, port, token, url }`. Separate method, not a flag. Opaque 16-char host id, so it does not leak the sandbox UUID. **Returns 200 with no headers at all.** |
 | Iframe safety | **Signed URL sends no `X-Frame-Options` and no CSP.** The office can iframe submissions. This was the design's biggest unknown and it is cleared. |
+| `chromium` and `ffmpeg` | **Both preinstalled** (`/usr/bin`, ffmpeg 7.1.3 with libx264 and aac). Pillow too. No `apt-get` step, which is just as well: **apt is unusable**, the sandbox user is not root and `dpkg` lock is 13 Permission denied. |
+| Headless screenshot | **~1.2s** at 1440x900. Requires `--no-sandbox`. |
+| mp4 render, 3 slides + audio | **~0.5s** |
+| `fs.downloadFile(path)` | Works, ~0.5s for a 350KB mp4. Same relative-path rules as `uploadFile`. |
 
 ### Three corrections to SPEC.md
 
@@ -352,6 +356,62 @@ both the subscription and the interval on `close` or a long session leaks.
 
 ---
 
+## The studio: how an agent films its own product
+
+The submit phase is no longer just a health check. Each agent screenshots its
+own running page and turns those screenshots into a narrated product video,
+and the office plays those videos rather than only linking preview URLs.
+
+All of it happens **inside the agent's own sandbox**, because the default image
+already carries chromium and ffmpeg (see the fact table). Nothing is installed,
+nothing extra is provisioned, and the whole path measures **~15s per agent**.
+
+Two tools, both phase-gated like every other:
+
+- `capture_screens` — chromium shoots `http://localhost:<port><path>` at desktop
+  or phone width. The thumbnails are **returned to the agent as images**, so an
+  agent writes its pitch looking at what it actually shipped.
+- `record_pitch` — title, tagline and up to five slides of headline, caption and
+  narration. Submit-phase only.
+
+The orchestrator does exactly one part of this: the ElevenLabs call. **The API
+key never enters a sandbox** an agent can run shell commands in. The mp3s are
+uploaded back and ffmpeg muxes them.
+
+Three things here are load-bearing and each one cost a debugging cycle:
+
+1. **Each slide is on screen for exactly as long as its own narration.** So
+   narration is synthesised *before* the frames are rendered. Guessing durations
+   and rendering first puts the voice two slides ahead of the picture.
+2. **Never build an absolute path out of `$HOME` in these scripts.** Everything
+   an agent supplies is single-quoted for the shell, and single quotes suppress
+   `$HOME` too — chromium then writes into a directory literally named `$HOME`,
+   every shot silently fails, and it reads as a dead server. The scripts `cd`
+   into `~/pitch` and use relative paths.
+3. **The concat demuxer ignores the last entry's duration**, so the final frame
+   is listed twice or the closing narration plays over the previous slide.
+
+`pnpm --filter arena smoke:studio` is rung 1½ of the ladder: one sandbox, two
+screenshots, one narrated video, about 30 seconds. It also keeps the rendered
+frames next to the mp4, because a slide that lays out wrong is invisible in a
+23 second video and obvious in a still.
+
+**ElevenLabs allows four concurrent syntheses.** Six agents filming four-slide
+decks at the end of the same phase is twenty-four at once, and the overflow
+comes back as `429 concurrent_limit_exceeded` — measured, on a two-agent round
+that lost two clips. `voice.ts` queues to three and retries once. A lost clip is
+not fatal: that slide gets silence of the estimated length and the rest stay in
+sync.
+
+**Every submission that shipped gets filmed**, whether or not its agent got
+round to it. `#fillMissingPitches` runs after the agents stop and before
+teardown, and films anyone who submitted but never recorded. A missing video
+looks like a missing entry on stage.
+
+The media is copied out to `apps/arena/public/media/<round>/` and served at
+`/media/...`, so **unlike preview URLs it outlives the sandbox**. A round with
+`keepAlive` off still has playable pitches tomorrow.
+
 ## The account vCPU cap will kill a demo run
 
 Measured, not guessed. The Daytona account has a **hard total-vCPU limit of 10**,
@@ -423,6 +483,7 @@ Never debug the full run. Each rung isolates one failure domain.
 | Rung | Command | Costs | Proves |
 |------|---------|-------|--------|
 | 1 | `pnpm smoke` | a few cents | The whole Daytona path: create, write, serve, sign, fetch, delete. **Already written and passing.** |
+| 1½ | `pnpm --filter arena smoke:studio` | cents, plus a little TTS | The studio: screenshot, narrate, render, download, serve. ~30s. |
 | 2 | `ARENA=fake pnpm dev` | nothing | Arena plus agent loop plus office, no Daytona, no tokens |
 | 3 | one real agent, `ROUND_SPEED=4` | some tokens | A model can actually drive the tools |
 | 4 | full six-agent run | real tokens | The demo. Run once, keep `events.jsonl`. |
@@ -456,11 +517,16 @@ apps/arena/
     arena-fake.ts    FakeArena
     log.ts           EventLog
     phases.ts        clock + ROUND
-    server.ts        SSE + static
+    studio.ts        screenshots, slides, ffmpeg -> the pitch video
+    voice.ts         ElevenLabs, one voice per agent
+    media.ts         where rendered media lands and how it is addressed
+    server.ts        SSE + static + /media
     dev.ts           full fake round, rung 2
+    smoke-studio.ts  rung 1½, the studio on its own
     env.ts           loads the repo-root .env
   smoke.mjs          rung 1, committed and passing
   runs/              one events jsonl per run, gitignored
+  public/media/      one directory of pitch videos per round, gitignored
 apps/frontend/       the office, Vite + React
 ```
 

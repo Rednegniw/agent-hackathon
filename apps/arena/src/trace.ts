@@ -15,6 +15,9 @@ export interface AgentTrace {
   pitch?: string
   previewUrl?: string
 
+  /** Title and tagline from the agent's own product video, if it filmed one. */
+  product?: string
+
   /** Commands run and files written, in order. */
   actions: string[]
 
@@ -41,6 +44,7 @@ export function traceFor(events: AgentEvent[], agentId: AgentId): AgentTrace {
     agentId,
     pitch: submit?.body,
     previewUrl: submit?.previewUrl,
+    product: mine.find((e) => e.kind === 'pitch')?.body,
     actions: builds.map((e) => e.body),
     reasoning: mine.filter((e) => e.kind === 'thought').map((e) => e.body),
     bytesWritten: bytes,
@@ -55,6 +59,7 @@ export function renderTrace(t: AgentTrace): string {
   const lines = [
     `AGENT: ${t.agentId}`,
     `PITCH: ${t.pitch ?? '(never submitted)'}`,
+    `PRODUCT VIDEO: ${t.product ?? '(never filmed one)'}`,
     `SHIPPED: ${t.previewUrl ?? 'nothing'}`,
     `BYTES WRITTEN: ${t.bytesWritten}`,
     '',

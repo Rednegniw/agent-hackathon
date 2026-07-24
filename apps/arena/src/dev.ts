@@ -1,6 +1,12 @@
 import './env.js'
 import { EventLog } from './log.js'
-import { DEFAULT_START, RoundRunner, parseStartOptions, type ArenaKind } from './round.js'
+import {
+  DEFAULT_START,
+  RoundRunner,
+  parseStartOptions,
+  type ArenaKind,
+  type StartOptions,
+} from './round.js'
 import { startServer } from './server.js'
 
 /**
@@ -24,6 +30,12 @@ const runId = new Date().toISOString().replace(/[:.]/g, '-')
 const log = new EventLog(runId)
 const runner = new RoundRunner(log)
 
+/** One line describing what a round will actually do. */
+const describe = (o: StartOptions) =>
+  `arena=${o.arena} agents=${o.agents}x${o.agentCount} ` +
+  `phases=${o.durations.mingle}/${o.durations.build}/${o.durations.submit}s` +
+  (o.keepAlive ? ' keep-alive' : '')
+
 startServer({
   log,
   state: () => ({ ...runner.status(), run: runId, file: log.file }),
@@ -32,7 +44,7 @@ startServer({
     if ('error' in opts) return { ok: false, reason: opts.error, status: 400 }
 
     const ack = runner.start(opts)
-    if (ack.ok) console.log(`[start] round ${ack.roundId} arena=${opts.arena} speed=${opts.speed}`)
+    if (ack.ok) console.log(`[start] round ${ack.roundId} ${describe(opts)}`)
     return ack
   },
 })
@@ -42,7 +54,9 @@ console.log(`[dev] run ${runId} -> ${log.file}`)
 if (process.env.AUTOSTART === '1') {
   const opts = parseStartOptions({
     arena: (process.env.ARENA as ArenaKind) ?? DEFAULT_START.arena,
-    speed: process.env.ROUND_SPEED ?? DEFAULT_START.speed,
+    agents: process.env.AGENT_KIND,
+    agentCount: process.env.AGENT_COUNT ? Number(process.env.AGENT_COUNT) : undefined,
+    speed: process.env.ROUND_SPEED,
   })
 
   if ('error' in opts) {
@@ -50,7 +64,7 @@ if (process.env.AUTOSTART === '1') {
     process.exit(1)
   }
 
-  console.log(`[dev] AUTOSTART arena=${opts.arena} speed=${opts.speed}`)
+  console.log(`[dev] AUTOSTART ${describe(opts)}`)
   runner.start(opts)
 } else {
   console.log('[dev] idle. Press Start in the office, or POST /start.')

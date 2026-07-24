@@ -36,6 +36,38 @@ export function sequenceAt(speed: number): Step[] {
 
 export const SEQUENCE: Step[] = sequenceAt(SPEED)
 
+/** Phase lengths in seconds. What the office actually sets. */
+export interface Durations {
+  mingle: number
+  build: number
+  submit: number
+}
+
+/** The default speed expressed as seconds, so the office has numbers to show. */
+export const defaultDurations = (speed = SPEED): Durations => {
+  const [mingle, build, submit] = sequenceAt(speed)
+  return {
+    mingle: Math.round(mingle.ms / 1000),
+    build: Math.round(build.ms / 1000),
+    submit: Math.round(submit.ms / 1000),
+  }
+}
+
+/**
+ * An explicit sequence, in seconds.
+ *
+ * Preferred over `sequenceAt` for anything an operator drives: a speed
+ * multiplier hides the number that actually matters, which is how long an
+ * agent gets to build. Real agents need minutes; scripted ones need seconds.
+ */
+export function sequenceOf(d: Durations): Step[] {
+  return [
+    { phase: 'mingle', ms: Math.round(d.mingle * 1000) },
+    { phase: 'build', ms: Math.round(d.build * 1000) },
+    { phase: 'submit', ms: Math.round(d.submit * 1000) },
+  ]
+}
+
 type Hook = (phase: Phase) => void | Promise<void>
 
 /**
@@ -133,9 +165,15 @@ export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 export const ALLOWED: Record<Phase, string[]> = {
   idle: [],
   judging: [],
-  mingle: ['pick_theme', 'send_message'],
-  build: ['sandbox_bash', 'sandbox_write', 'send_message'],
-  submit: ['submit'],
+  mingle: ['form_team', 'send_message'],
+  build: ['sandbox_bash', 'sandbox_write', 'send_message', 'submit', 'capture_screens'],
+
+  /**
+   * record_pitch is submit-only, but it waits rather than refusing when called
+   * from 'build' — see waitForSubmit in agent.ts. This table is what the agent
+   * is told; the tool is what enforces it.
+   */
+  submit: ['sandbox_bash', 'sandbox_write', 'submit', 'capture_screens', 'record_pitch'],
   judged: [],
 }
 
