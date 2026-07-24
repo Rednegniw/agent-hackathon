@@ -3,7 +3,9 @@ import type { BaseArena } from './arena-base.js'
 import { DaytonaArena, KEEP_ALIVE } from './arena-daytona.js'
 import { FakeArena } from './arena-fake.js'
 import { AGENT_IDS, type AgentId, type Phase } from './events.js'
+import { Inbox } from './inbox.js'
 import { runEvaluation } from './judge.js'
+import { TEAMS_ENABLED, TeamRoster } from './teams.js'
 import type { EventLog } from './log.js'
 import { PhaseClock, defaultDurations, sequenceOf, sleep, type Durations } from './phases.js'
 import { canFilm, captureShots, recordPitch, type ShotSpec } from './studio.js'
@@ -357,6 +359,15 @@ export class RoundRunner {
      */
     const roster: AgentId[] = AGENT_IDS.slice(0, opts.agentCount)
 
+    /**
+     * Messaging and teams, which real.ts had and this runner did not. Without
+     * them a round started from the Start button ran agents that could not
+     * reach each other and were never grouped, so it could not reproduce a
+     * command-line round however identical its settings looked.
+     */
+    const inbox = new Inbox()
+    const teams = opts.agents === 'real' && TEAMS_ENABLED ? new TeamRoster() : undefined
+
     clock.onPhase(async (phase) => {
       this.#log.emit({ agentId: 'system', kind: 'phase', body: phase })
       console.log(`[round ${roundId}] phase ${phase}`)
@@ -366,10 +377,39 @@ export class RoundRunner {
        * created for an agent that never got going.
        */
       if (phase === 'build') {
+        if (teams) {
+          for (const t of teams.settle(roster)) {
+            this.#log.emit({ agentId: t.owner, kind: 'team', body: `${t.id}: ${t.members.join(', ')}` })
+
+            // Or an auto-grouped agent never learns it has teammates.
+            if (t.members.length > 1) {
+              for (const m of t.members) {
+                const others = t.members.filter((x) => x !== m)
+                inbox.post(
+                  m,
+                  t.owner,
+                  `You are on ${t.id} with ${others.join(' and ')}. Your team ships ONE project and ` +
+                    `only its first submission counts, so message them now: pick an integrator to own ` +
+                    `the final page and submit it, and split the pieces. Deliver your piece to the ` +
+                    `integrator with share_file.`,
+                )
+              }
+            }
+          }
+          console.log(`[round ${roundId}] teams\n${teams.describe()}`)
+        }
+
         if (arena instanceof DaytonaArena) await arena.provision(roster)
       }
 
+      /**
+       * Park no reader past the build phase. An agent blocked on inbox.take()
+       * when judging starts would hold the round open until its own timeout.
+       */
+      if (phase === 'judging' || phase === 'judged') inbox.releaseAll()
     })
+
+    const roundIsOpen = () => !atOrPast(clock.phase(), 'judging')
 
     const drive = (id: AgentId) =>
       opts.agents === 'real'
@@ -379,7 +419,7 @@ export class RoundRunner {
             roster.filter((o) => o !== id),
             opts.model,
             Number(process.env.MAX_TURNS ?? 30),
-            { roundId },
+            { roundId, teams, inbox, isOpen: roundIsOpen },
           )
         : this.#agentScript(arena, clock, id, opts.arena, roundId)
 
@@ -416,7 +456,7 @@ export class RoundRunner {
        */
       if (process.env.SKIP_JUDGING !== '1') {
         try {
-          const { winner } = await runEvaluation(this.#log.all(), arena)
+          const { winner } = await runEvaluation(this.#log.all(), arena, teams)
           if (winner) console.log(`[round ${roundId}] winner: ${winner.agentId} (${winner.total})`)
         } catch (err) {
           console.error(`[round ${roundId}] judging failed:`, (err as Error).message)
