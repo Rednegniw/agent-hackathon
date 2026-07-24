@@ -1,4 +1,5 @@
-# Shared .env and .env.local are committed intentionally
+# Local secrets - never commit (shared .env is tracked intentionally)
+.env.local
 .env.*.local
 
 # Dependencies
