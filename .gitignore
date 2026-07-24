@@ -1,5 +1,4 @@
-# Local overrides (shared .env is committed intentionally)
-.env.local
+# Shared .env and .env.local are committed intentionally
 .env.*.local
 
 # Dependencies
