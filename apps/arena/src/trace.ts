@@ -77,3 +77,39 @@ export function renderTrace(t: AgentTrace): string {
 export function submittedAgents(events: AgentEvent[]): AgentId[] {
   return events.filter((e) => e.kind === 'submit').map((e) => e.agentId as AgentId)
 }
+
+/**
+ * One trace for a whole team.
+ *
+ * A team shares its owner's sandbox, so its members' actions are already
+ * interleaved in one box. Judging them separately would enter the same
+ * artifact two or three times and score it twice, and each member would
+ * present a near-identical case built from the same shared history.
+ */
+export function traceForTeam(events: AgentEvent[], members: AgentId[], label: string): AgentTrace {
+  const parts = members.map((m) => traceFor(events, m))
+  const submitted = parts.find((p) => p.previewUrl) ?? parts[0]
+
+  return {
+    agentId: label as AgentId,
+    track: submitted.track,
+    pitch: submitted.pitch,
+    previewUrl: submitted.previewUrl,
+
+    // Interleaved by time, so the record reads as one build, which it was.
+    actions: members
+      .flatMap((m) => events.filter((e) => e.agentId === m && e.kind === 'build'))
+      .sort((a, b) => a.ts - b.ts)
+      .map((e) => `${e.agentId}: ${e.body}`),
+
+    reasoning: members
+      .flatMap((m) => events.filter((e) => e.agentId === m && e.kind === 'thought'))
+      .sort((a, b) => a.ts - b.ts)
+      .map((e) => `${e.agentId}: ${e.body}`),
+
+    bytesWritten: parts.reduce((n, p) => n + p.bytesWritten, 0),
+    toolCalls: parts.reduce((n, p) => n + p.toolCalls, 0),
+    firstActionAt: Math.min(...parts.map((p) => p.firstActionAt ?? Infinity)),
+    submittedAt: submitted.submittedAt,
+  }
+}

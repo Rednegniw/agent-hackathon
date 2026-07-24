@@ -88,7 +88,7 @@ const main = async () => {
     // The evaluator round: agents present, jurors score, a winner is crowned.
     if (process.env.SKIP_JUDGING !== '1') {
       console.log('\n[judge] evaluator round...')
-      const { verdicts, winner } = await runEvaluation(log.all(), arena)
+      const { verdicts, winner } = await runEvaluation(log.all(), arena, teams)
 
       for (const v of verdicts) {
         console.log(`  ${v.agentId.padEnd(6)} ${String(v.total).padStart(3)}/90  ${v.presentation.slice(0, 70)}`)

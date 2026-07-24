@@ -2,7 +2,8 @@ import { query } from '@anthropic-ai/claude-agent-sdk'
 import type { Arena } from './arena.js'
 import type { AgentEvent, AgentId } from './events.js'
 import { TOPIC } from './topic.js'
-import { renderTrace, submittedAgents, traceFor, type AgentTrace } from './trace.js'
+import type { TeamRoster } from './teams.js'
+import { renderTrace, submittedAgents, traceFor, traceForTeam, type AgentTrace } from './trace.js'
 
 /**
  * The evaluator round.
@@ -55,10 +56,13 @@ export interface Score {
 }
 
 export interface Verdict {
+  /** Solo agent id, or a team id when the entry was a team. */
   agentId: AgentId
   total: number
   perJudge: Score[]
   presentation: string
+  members: AgentId[]
+  voice: AgentId
 }
 
 const MODEL = process.env.JUDGE_MODEL ?? 'claude-haiku-4-5'
@@ -88,17 +92,20 @@ async function ask(prompt: string, system: string, maxTurns = 2): Promise<string
 }
 
 /** The agent makes its own case, grounded in its trace. */
-async function present(trace: AgentTrace, arena: Arena): Promise<string> {
+async function present(trace: AgentTrace, arena: Arena, entry: Entry): Promise<string> {
+  const who = entry.members.length > 1
+    ? `${entry.label}, a team of ${entry.members.join(' and ')}`
+    : entry.label
   const text = await ask(
     `Here is the record of what you actually did:\n\n${renderTrace(trace)}\n\n` +
       `Present your work to the judges in at most 60 words. Argue from what you built and the ` +
       `decisions you made. Do not invent anything that is not in the record. No preamble.`,
-    `You are ${trace.agentId}, an agent presenting your hackathon project to a panel of judges. ` +
+    `You are ${who}, presenting your hackathon project to a panel of judges. ` +
       `The brief was: ${TOPIC}`,
   )
 
   const speech = text.trim().slice(0, 600)
-  arena.emit({ agentId: trace.agentId, kind: 'present', body: speech, track: trace.track as never })
+  arena.emit({ agentId: entry.voice, kind: 'present', body: speech, track: trace.track as never })
   return speech
 }
 
@@ -108,6 +115,7 @@ async function scoreOne(
   trace: AgentTrace,
   speech: string,
   arena: Arena,
+  entry: Entry,
 ): Promise<Score | null> {
   const rubric = CRITERIA.map((c) => `  "${c.key}": 0-10   // ${c.prompt}`).join('\n')
 
@@ -140,9 +148,9 @@ async function scoreOne(
   }
 
   if (!parsed) {
-    console.warn(`[judge] ${judge.id} could not score ${trace.agentId}, abstaining`)
+    console.warn(`[judge] ${judge.id} could not score ${entry.label}, abstaining`)
     arena.emit({
-      agentId: trace.agentId,
+      agentId: entry.voice,
       kind: 'verdict',
       body: `${judge.id}: abstained (no parseable score)`,
     })
@@ -160,13 +168,13 @@ async function scoreOne(
   const comment = String(parsed?.comment ?? '(no comment)').slice(0, 240)
 
   arena.emit({
-    agentId: trace.agentId,
+    agentId: entry.voice,
     kind: 'verdict',
-    body: `${judge.id}: ${total}/30 - ${comment}`,
+    body: `${judge.id} on ${entry.label}: ${total}/30 - ${comment}`,
     score: { mechanical: 0, creative: total, rank: 0 },
   })
 
-  return { judge: judge.id, agentId: trace.agentId, scores, total, comment }
+  return { judge: judge.id, agentId: entry.label as AgentId, scores, total, comment }
 }
 
 export interface EvaluationResult {
@@ -174,11 +182,51 @@ export interface EvaluationResult {
   winner?: Verdict
 }
 
-/** Runs the whole evaluator round and crowns a winner. */
-export async function runEvaluation(events: AgentEvent[], arena: Arena): Promise<EvaluationResult> {
-  const finalists = submittedAgents(events)
+/**
+ * One competitor: a solo agent, or a whole team collapsed into a single entry.
+ * Teams share a sandbox, so without this the same artifact enters two or three
+ * times and gets scored as separate submissions.
+ */
+interface Entry {
+  label: string
+  members: AgentId[]
+  /** Whose id carries the entry's events, so the office can place them. */
+  voice: AgentId
+}
 
-  if (!finalists.length) {
+function entriesFrom(events: AgentEvent[], teams?: TeamRoster): Entry[] {
+  const finalists = submittedAgents(events)
+  const seen = new Set<string>()
+  const entries: Entry[] = []
+
+  for (const id of finalists) {
+    const team = teams?.teamOf(id)
+
+    if (!team) {
+      if (seen.has(id)) continue
+      seen.add(id)
+      entries.push({ label: id, members: [id], voice: id })
+      continue
+    }
+
+    // Whole team, once, however many members happened to call submit.
+    if (seen.has(team.id)) continue
+    seen.add(team.id)
+    entries.push({ label: team.id, members: team.members, voice: team.owner })
+  }
+
+  return entries
+}
+
+/** Runs the whole evaluator round and crowns a winner. */
+export async function runEvaluation(
+  events: AgentEvent[],
+  arena: Arena,
+  teams?: TeamRoster,
+): Promise<EvaluationResult> {
+  const entries = entriesFrom(events, teams)
+
+  if (!entries.length) {
     arena.emit({ agentId: 'system', kind: 'score', body: 'nobody submitted, no winner' })
     return { verdicts: [] }
   }
@@ -186,7 +234,7 @@ export async function runEvaluation(events: AgentEvent[], arena: Arena): Promise
   arena.emit({
     agentId: 'system',
     kind: 'phase',
-    body: `judging ${finalists.length} finalists with ${JUDGES.length} jurors`,
+    body: `judging ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} with ${JUDGES.length} jurors`,
   })
 
   const verdicts: Verdict[] = []
@@ -196,11 +244,17 @@ export async function runEvaluation(events: AgentEvent[], arena: Arena): Promise
    * keeps the office readable: scores land one agent at a time rather than
    * eighteen at once.
    */
-  const traces = finalists.map((id) => traceFor(events, id))
-  const speeches = await Promise.all(traces.map((t) => present(t, arena)))
+  const traces = entries.map((e) =>
+    e.members.length > 1 ? traceForTeam(events, e.members, e.label) : traceFor(events, e.members[0]),
+  )
+  const speeches = await Promise.all(
+    traces.map((t, i) => present(t, arena, entries[i])),
+  )
 
   for (const [i, trace] of traces.entries()) {
-    const settled = await Promise.all(JUDGES.map((j) => scoreOne(j, trace, speeches[i], arena)))
+    const settled = await Promise.all(
+      JUDGES.map((j) => scoreOne(j, trace, speeches[i], arena, entries[i])),
+    )
     const perJudge = settled.filter((s): s is Score => s !== null)
 
     /**
@@ -210,24 +264,27 @@ export async function runEvaluation(events: AgentEvent[], arena: Arena): Promise
     const raw = perJudge.reduce((a, s) => a + s.total, 0)
     const total = perJudge.length ? Math.round((raw / perJudge.length) * JUDGES.length) : 0
 
-    verdicts.push({ agentId: trace.agentId, total, perJudge, presentation: speeches[i] })
+    verdicts.push({ agentId: entries[i].label as AgentId, total, perJudge, presentation: speeches[i], members: entries[i].members, voice: entries[i].voice })
   }
 
   verdicts.sort((a, b) => b.total - a.total)
   verdicts.forEach((v, i) => {
     arena.emit({
-      agentId: v.agentId,
+      agentId: v.voice,
       kind: 'score',
-      body: `rank ${i + 1} of ${verdicts.length}, ${v.total}/${JUDGES.length * CRITERIA.length * 10}`,
+      body: `${v.agentId}: rank ${i + 1} of ${verdicts.length}, ${v.total}/${JUDGES.length * CRITERIA.length * 10}`,
       score: { mechanical: 0, creative: v.total, rank: i + 1 },
     })
   })
 
   const winner = verdicts[0]
   arena.emit({
-    agentId: winner.agentId,
+    agentId: winner.voice,
     kind: 'crown',
-    body: `${winner.agentId} wins with ${winner.total} points`,
+    body:
+      winner.members.length > 1
+        ? `${winner.agentId} (${winner.members.join(' + ')}) wins with ${winner.total} points`
+        : `${winner.agentId} wins with ${winner.total} points`,
   })
 
   return { verdicts, winner }
