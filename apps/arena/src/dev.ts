@@ -1,4 +1,4 @@
-import 'dotenv/config'
+import './env.js'
 import { FakeArena } from './arena-fake.js'
 import { AGENT_IDS, TRACKS, type AgentId, type Track } from './events.js'
 import { EventLog } from './log.js'

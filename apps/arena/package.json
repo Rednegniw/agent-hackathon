@@ -1,0 +1,25 @@
+{
+  "name": "arena",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/dev.ts",
+    "dev:fast": "ROUND_SPEED=40 tsx src/dev.ts",
+    "typecheck": "tsc --noEmit",
+    "smoke": "node smoke.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.219",
+    "@daytonaio/sdk": "^0.200.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.1.1",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  }
+}

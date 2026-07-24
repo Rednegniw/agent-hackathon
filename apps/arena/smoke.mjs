@@ -4,8 +4,12 @@
  * Also inspects the preview response headers, because if the proxy forbids
  * framing then the office cannot iframe submissions and the design changes.
  */
-import 'dotenv/config'
+import { fileURLToPath } from 'node:url'
+import { config as loadEnv } from 'dotenv'
 import { Daytona } from '@daytonaio/sdk'
+
+// Secrets live in the repo-root .env, shared by every workspace package.
+loadEnv({ path: fileURLToPath(new URL('../../.env', import.meta.url)) })
 
 const PORT = 3000
 const log = (...a) => console.log(...a)

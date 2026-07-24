@@ -5,6 +5,12 @@
 
 # Dependencies
 node_modules/
+.pnpm-store/
+
+# pnpm is the only package manager here - never commit another lockfile
+package-lock.json
+yarn.lock
+bun.lockb
 
 # Build output
 dist/

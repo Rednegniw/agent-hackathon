@@ -363,7 +363,7 @@ Ship this first. It is what unblocks Patrik.
 
 The health-check and phase logic are then shared between fake and real, which
 means the code path Patrik develops against is the code path that ships. Expose
-it with `ARENA=fake npm run dev`.
+it with `ARENA=fake pnpm dev`.
 
 ---
 
@@ -373,11 +373,11 @@ Never debug the full run. Each rung isolates one failure domain.
 
 | Rung | Command | Costs | Proves |
 |------|---------|-------|--------|
-| 1 | `npm run smoke` | a few cents | The whole Daytona path: create, write, serve, sign, fetch, delete. **Already written and passing.** |
-| 2 | `ARENA=fake npm run dev` | nothing | Arena plus agent loop plus office, no Daytona, no tokens |
+| 1 | `pnpm smoke` | a few cents | The whole Daytona path: create, write, serve, sign, fetch, delete. **Already written and passing.** |
+| 2 | `ARENA=fake pnpm dev` | nothing | Arena plus agent loop plus office, no Daytona, no tokens |
 | 3 | one real agent, `ROUND_SPEED=4` | some tokens | A model can actually drive the tools |
 | 4 | full six-agent run | real tokens | The demo. Run once, keep `events.jsonl`. |
-| any | `npm run replay events.jsonl` | nothing | The office, at 10x, no agents |
+| any | `pnpm replay events.jsonl` | nothing | The office, at 10x, no agents |
 
 `smoke.mjs` is committed and green. Re-run it any time Daytona misbehaves; it
 tells you in thirty seconds whether the problem is us or them.
@@ -395,18 +395,30 @@ first, rather than discovering it three times.
 
 ## File layout
 
+pnpm workspace. Every package lives under `apps/`, the root holds only workspace config.
+
 ```
-src/
-  events.ts        AgentEvent, AgentId, Track, Phase   <- shared, both lanes import
-  arena.ts         Arena interface
-  arena-daytona.ts DaytonaArena
-  arena-fake.ts    FakeArena
-  log.ts           EventLog
-  phases.ts        clock + ROUND
-  server.ts        SSE + static
-smoke.mjs          rung 1, committed and passing
-events.jsonl       demo insurance, commit a good run
+apps/arena/
+  src/
+    events.ts        AgentEvent, AgentId, Track, Phase   <- shared, both lanes import
+    arena.ts         Arena interface
+    arena-base.ts    shared health-check and phase logic
+    arena-daytona.ts DaytonaArena
+    arena-fake.ts    FakeArena
+    log.ts           EventLog
+    phases.ts        clock + ROUND
+    server.ts        SSE + static
+    dev.ts           full fake round, rung 2
+    env.ts           loads the repo-root .env
+  smoke.mjs          rung 1, committed and passing
+  runs/              one events jsonl per run, gitignored
+apps/frontend/       the office, Vite + React
 ```
+
+Secrets stay in a single repo-root `.env`. Packages resolve it relative to their
+own file, not the cwd, because pnpm runs scripts with the cwd set to the package:
+TypeScript imports `./env.js`, `smoke.mjs` calls dotenv itself. Anything else
+cwd-relative also lands inside the package, so arena writes `apps/arena/runs/`.
 
 ---
 

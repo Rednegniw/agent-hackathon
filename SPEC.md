@@ -151,7 +151,7 @@ homemade version first.
 ### Package
 
 ```
-npm i @anthropic-ai/claude-agent-sdk zod @daytonaio/sdk
+pnpm --filter arena add @anthropic-ai/claude-agent-sdk zod @daytonaio/sdk
 ```
 
 Verified API surface from the Agent SDK docs:

@@ -1,0 +1,9 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Deps whose postinstall must run: protobufjs comes in via the Daytona SDK,
+# esbuild via tsx. pnpm blocks dependency build scripts unless listed here.
+onlyBuiltDependencies:
+  - esbuild
+  - protobufjs
