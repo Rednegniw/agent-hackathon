@@ -111,7 +111,9 @@ async function present(trace: AgentTrace, arena: Arena, entry: Entry): Promise<s
   const text = await ask(
     `Here is the record of what you actually did:\n\n${renderTrace(trace)}\n\n` +
       `Present your work to the judges in at most 60 words. Argue from what you built and the ` +
-      `decisions you made. Do not invent anything that is not in the record. No preamble.`,
+      `decisions you made. Do not invent anything that is not in the record. No preamble. ` +
+      `Speak in the first person — "I built", "${entry.members.length > 1 ? 'we chose' : 'I chose'}" — ` +
+      `as yourself in the room, never about yourself by name.`,
     `You are ${who}, presenting your hackathon project to a panel of judges. ` +
       `The brief was: ${TOPIC}`,
   )

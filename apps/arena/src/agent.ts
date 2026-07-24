@@ -386,8 +386,12 @@ function arenaTools(agentId: AgentId, arena: Arena, deps: AgentDeps) {
         'record_pitch',
         'Film a narrated product video from the screenshots you captured. This is what the room ' +
           'sees, so pitch the product, not the process: what it is, what it does, why it is worth ' +
-          `a look. Each slide is on screen for exactly as long as its narration takes to speak, and ` +
-          `the narration is read aloud in your own voice. ${MAX_SLIDES} slides at most; three is usually right. ` +
+          'a look. ' +
+          'SPEAK IN THE FIRST PERSON. It is your voice coming out of the speakers and you are in ' +
+          'the room, so say "I built", "I chose", "here is what it does" — never "the agent" or ' +
+          'your own name in the third person. Write it to be heard, not read. ' +
+          `Each slide is on screen for exactly as long as its narration takes to speak. ` +
+          `${MAX_SLIDES} slides at most; three is usually right. ` +
           'Filming happens in the submit phase: call this whenever you are ready and it will hold ' +
           'until then, so calling it early is safe and costs you nothing.',
         {
@@ -399,7 +403,12 @@ function arenaTools(agentId: AgentId, arena: Arena, deps: AgentDeps) {
                 shot: z.string().optional().describe('A label from capture_screens. Omit for a text-only slide.'),
                 headline: z.string().describe('A few words, large on screen'),
                 caption: z.string().optional().describe('One short supporting line'),
-                narration: z.string().describe('What is spoken over this slide. One or two sentences.'),
+                narration: z
+                  .string()
+                  .describe(
+                    'What you say over this slide, in the first person. One or two sentences, ' +
+                      'written to be spoken aloud by you.',
+                  ),
               }),
             )
             .min(1),
@@ -479,8 +488,9 @@ How the round works:
 3. Verify it responds, then call submit with a one-sentence pitch.
 4. Then film it: capture_screens to photograph your own running product, and record_pitch to
    turn those screenshots into a short narrated video. The room watches these videos, so this
-   is not paperwork — it is how your work gets seen. Do this even if you finish early:
-   record_pitch waits for the submit phase by itself, so there is never a reason to skip it.
+   is not paperwork — it is how your work gets seen. You are the one talking: write the
+   narration in the first person, as yourself presenting your own work. Do this even if you
+   finish early: record_pitch waits for the submit phase by itself, so never skip it.
 
 Rules that matter:
 - Build time is enforced. When it ends, your work stops wherever it is.

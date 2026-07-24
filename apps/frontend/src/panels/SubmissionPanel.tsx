@@ -38,13 +38,6 @@ export default function SubmissionPanel({
   const clamped = Math.min(index, Math.max(0, submissions.length - 1))
   const current = submissions[clamped]
 
-  /**
-   * The pitch leads when there is one. It is the agent's own account of what
-   * it built, in its own voice, and it reads in twenty seconds — the live app
-   * is one tap away and stays the thing you poke at.
-   */
-  const [tab, setTab] = useState<'pitch' | 'app'>('pitch')
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') onIndex(Math.max(0, clamped - 1))
@@ -85,18 +78,13 @@ export default function SubmissionPanel({
       </div>
 
       <div className="sheet-body">
-        {current.videoUrl && (
-          <div className="seg-row">
-            <button className={tab === 'pitch' ? 'on' : ''} onClick={() => setTab('pitch')}>
-              Pitch
-            </button>
-            <button className={tab === 'app' ? 'on' : ''} onClick={() => setTab('app')}>
-              Live app
-            </button>
-          </div>
-        )}
-
-        {current.videoUrl && tab === 'pitch' ? (
+        {/*
+          The pitch is the panel. The live app is a link out rather than a
+          second tab: it is a real thing running on a real URL, and judging it
+          means poking at it full size, not squinting at it in a 404px column.
+          Without a pitch the frame stays, since then it is all there is.
+        */}
+        {current.videoUrl ? (
           <Pitch
             videoUrl={current.videoUrl}
             posterUrl={current.posterUrl}
@@ -108,6 +96,17 @@ export default function SubmissionPanel({
             title={`${current.agentId}'s app`}
             onExpand={() => onExpand(current)}
           />
+        )}
+
+        {current.previewUrl && (
+          <a
+            className="btn btn-secondary"
+            href={current.previewUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open the live app ↗
+          </a>
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

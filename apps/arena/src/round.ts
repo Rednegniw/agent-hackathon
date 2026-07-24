@@ -502,15 +502,21 @@ export class RoundRunner {
           }
 
           const usable = taken.filter((s) => !s.error).map((s) => s.label)
+          /**
+           * Still the agent's voice, even though it never wrote this. The
+           * submit pitch is already the agent speaking about its own work, so
+           * it carries the first person for free — this only has to avoid
+           * wrapping it in narration about the agent.
+           */
           const pitch = await recordPitch(box, id, roundId, {
-            title: `${id}'s entry`,
+            title: 'What I shipped',
             tagline: sub.body.slice(0, 160),
             slides: [
               {
                 shot: usable[0],
-                headline: 'What it shipped',
+                headline: 'What I built',
                 caption: sub.body.slice(0, 120),
-                narration: sub.body.slice(0, 300),
+                narration: `Here is what I built. ${sub.body.slice(0, 280)}`,
               },
             ],
           })
@@ -518,9 +524,21 @@ export class RoundRunner {
           this.#log.emit({
             agentId: id,
             kind: 'pitch',
-            body: `${sub.body.slice(0, 120)} (auto-filmed: ${id} never recorded one)`,
+            /**
+             * The agent's own words only. That this deck was filmed for it is
+             * a fact about the round, not something the agent says, and the
+             * office renders this body as the caption under the video — so the
+             * note goes to the operator's stream instead of into its mouth.
+             */
+            body: sub.body.slice(0, 160),
             videoUrl: pitch.videoUrl,
             posterUrl: pitch.posterUrl,
+          })
+
+          this.#log.emit({
+            agentId: 'system',
+            kind: 'phase',
+            body: `${id} never filmed a pitch, so one was made from its submission`,
           })
         } catch (err) {
           console.warn(`[round ${roundId}] could not auto-film ${id}:`, (err as Error).message)
@@ -617,21 +635,27 @@ export class RoundRunner {
         body: usable.length ? `captured ${usable.join(', ')}` : 'no screenshot rendered',
       })
 
+      /**
+       * First person throughout, because it is the agent's own voice reading
+       * this aloud to the room. A deck that says "ada shipped a page" while
+       * ada is the one speaking sounds like a narrator describing an exhibit.
+       */
       const pitch = await recordPitch(box, id, roundId, {
         title: 'Hello world',
-        tagline: `A scripted entry from ${id}, shipped to prove the pipeline end to end.`,
+        tagline: 'I shipped one self-contained page, live, from my own sandbox.',
         slides: [
           {
             shot: usable[0],
-            headline: 'The page',
-            caption: 'One file, served from a sandbox of its own.',
-            narration: `This is what ${id} shipped: a single self-contained page, served from its own sandbox.`,
+            headline: 'What I built',
+            caption: 'One file, served from a sandbox of my own.',
+            narration: 'I built a single self-contained page and served it from my own sandbox.',
           },
           {
             shot: usable[1],
             headline: 'On a phone',
-            caption: 'Same page, narrower viewport.',
-            narration: 'The same page again, captured at phone width by a real browser inside the sandbox.',
+            caption: 'The same page, narrower.',
+            narration:
+              'Here it is again at phone width. I photographed it myself, with a real browser running inside my sandbox.',
           },
         ],
       })
@@ -639,7 +663,7 @@ export class RoundRunner {
       this.#log.emit({
         agentId: id,
         kind: 'pitch',
-        body: `Hello world — a scripted entry from ${id}`,
+        body: 'Hello world — I shipped one self-contained page, live, from my own sandbox.',
         videoUrl: pitch.videoUrl,
         posterUrl: pitch.posterUrl,
       })
