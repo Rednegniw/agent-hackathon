@@ -1,12 +1,12 @@
 import type { AgentEvent } from './events.js'
 import { CRITERIA, JUDGES, type Verdict } from './judge.js'
 import { TOPIC } from './topic.js'
-import { traceFor } from './trace.js'
+import { traceFor, traceForTeam } from './trace.js'
 
 /**
  * Logs the round to Braintrust as an experiment: one case per finalist, the
  * brief as input, the shipped artifact as output, and one scorer per criterion
- * plus the mechanical checks.
+ * plus the panel total. A finalist is a solo agent or a whole team.
  *
  * Deliberately non-fatal. A missing key or a network blip must never take down
  * a round that already produced a winner, so every failure here is a warning.
@@ -28,7 +28,16 @@ export async function logToBraintrust(verdicts: Verdict[], events: AgentEvent[])
     })
 
     for (const v of verdicts) {
-      const trace = traceFor(events, v.agentId)
+      /**
+       * Must match how runEvaluation built the trace it scored. `v.agentId` is
+       * the TEAM LABEL for a team entry, and no event carries a label as its
+       * agentId, so traceFor(events, 'team-1') silently returns an empty trace:
+       * every team round logged previewUrl undefined, 0 bytes and no actions.
+       */
+      const trace =
+        v.members.length > 1
+          ? traceForTeam(events, v.members, v.agentId)
+          : traceFor(events, v.members[0])
 
       const scores: Record<string, number> = {}
 
