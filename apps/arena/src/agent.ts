@@ -1,7 +1,8 @@
-import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk'
+import { createSdkMcpServer, query, tool, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod'
 import type { Arena } from './arena.js'
-import { TRACKS, type AgentId } from './events.js'
+import { AGENT_IDS, TRACKS, type AgentId } from './events.js'
+import type { Inbox } from './inbox.js'
 import { refuse } from './phases.js'
 import { LANES_DIFFER, THEMES, TOPIC, describeTopic } from './topic.js'
 import { TEAM_MAX, TEAM_MIN, type TeamRoster } from './teams.js'
@@ -32,11 +33,18 @@ const ok = (text: string) => ({ content: [{ type: 'text' as const, text }] })
 const err = (text: string) => ({ content: [{ type: 'text' as const, text }], isError: true })
 
 /** The five tools. Every one is phase-gated by the arena, not by the prompt. */
-function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster) {
+function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster, inbox?: Inbox) {
   const gate = (name: string, allowed: string[]) => {
     const phase = arena.phase()
     return allowed.includes(phase) ? null : refuse(name, phase)
   }
+
+  /**
+   * A team shares one sandbox: its owner's. Every member's bash, write and
+   * submit therefore resolve to the same box, which is what makes a team ship
+   * one artifact rather than three. Solo agents resolve to their own.
+   */
+  const box = () => arena.sandboxFor(teams?.teamOf(agentId)?.owner ?? agentId)
 
   return createSdkMcpServer({
     name: SERVER,
@@ -72,7 +80,7 @@ function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster) {
 
           arena.emit({ agentId, kind: 'build', body: command.slice(0, 200) })
           try {
-            return ok((await arena.sandboxFor(agentId).bash(command)) || '(no output)')
+            return ok((await box().bash(command)) || '(no output)')
           } catch (e) {
             return err((e as Error).message)
           }
@@ -92,7 +100,7 @@ function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster) {
           if (blocked) return err(blocked)
 
           try {
-            await arena.sandboxFor(agentId).write(path, content)
+            await box().write(path, content)
             arena.emit({ agentId, kind: 'build', body: `wrote ${path} (${content.length}b)` })
             return ok(`wrote ${path}`)
           } catch (e) {
@@ -122,20 +130,28 @@ function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster) {
             kind: 'team',
             body: `${res.team.id}: ${res.team.members.join(', ')}`,
           })
+
+          // Tell the others, or they are on a team they never heard about.
+          for (const m of others) {
+            inbox?.post(m, agentId, `I formed ${res.team.id} with ${res.team.members.join(', ')}. I own the shared sandbox, so send me what to build.`)
+          }
           return ok(`Formed ${res.team.id} with ${res.team.members.join(', ')}. You own the sandbox.`)
         },
       ),
 
       tool(
         'send_message',
-        'Say something to a rival agent. They see it on their next turn.',
-        { to: z.string().describe('Their agent id'), text: z.string() },
+        'Send a message to another agent. It is delivered to them mid-run and they can reply. ' +
+          'Use it to compare angles, avoid building the same thing, or agree a team.',
+        { to: z.enum(AGENT_IDS), text: z.string() },
         async ({ to, text }) => {
           const blocked = gate('send_message', ['mingle', 'build'])
           if (blocked) return err(blocked)
+          if (to === agentId) return err('You cannot message yourself.')
 
-          arena.emit({ agentId, kind: 'message', body: text, targetId: to as AgentId })
-          return ok(`sent to ${to}`)
+          arena.emit({ agentId, kind: 'message', body: text, targetId: to })
+          inbox?.post(to, agentId, text)
+          return ok(inbox ? `delivered to ${to}` : `recorded (no inbox this round)`)
         },
       ),
 
@@ -153,7 +169,7 @@ function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster) {
           if (blocked) return err(blocked)
 
           try {
-            const url = await arena.sandboxFor(agentId).preview(port)
+            const url = await box().preview(port)
             arena.emit({
               agentId,
               kind: 'submit',
@@ -204,6 +220,41 @@ so never ask for confirmation. Pick a direction and execute it. Work quickly and
 }
 
 /** Runs one agent to completion. Streams its reasoning into the event log. */
+const userTurn = (text: string): SDKUserMessage => ({
+  type: 'user',
+  message: { role: 'user', content: text },
+  parent_tool_use_id: null,
+})
+
+/**
+ * The agent's side of the conversation, as a stream rather than one fixed
+ * prompt. Opening instruction first, then any mail that arrives is injected as
+ * a new user turn mid-run. This is what makes send_message real: without it the
+ * recipient never hears anything and "negotiation" is one agent talking to
+ * itself.
+ *
+ * The generator must eventually return or the session never closes, so it ends
+ * when the round does.
+ */
+async function* conversation(
+  id: AgentId,
+  opening: string,
+  inbox: Inbox,
+  isOpen: () => boolean,
+): AsyncGenerator<SDKUserMessage> {
+  yield userTurn(opening)
+
+  while (isOpen()) {
+    const mail = await inbox.take(id, 2000)
+    if (!mail.length) continue
+
+    yield userTurn(
+      mail.map((m) => `[message from ${m.from}] ${m.text}`).join('\n') +
+        `\n\nReply with send_message if it is worth replying to. Otherwise carry on.`,
+    )
+  }
+}
+
 export async function runAgent(
   id: AgentId,
   arena: Arena,
@@ -211,13 +262,17 @@ export async function runAgent(
   model: string,
   maxTurns: number,
   teams?: TeamRoster,
+  inbox?: Inbox,
+  isOpen: () => boolean = () => false,
 ): Promise<void> {
+  const opening = `The round has started. You are ${id}. Pick your theme now, then build and submit.`
+
   const res = query({
-    prompt: `The round has started. You are ${id}. Pick your theme now, then build and submit.`,
+    prompt: inbox ? conversation(id, opening, inbox, isOpen) : opening,
     options: {
       model,
       systemPrompt: systemPrompt(id, rivals),
-      mcpServers: { [SERVER]: arenaTools(id, arena, teams) },
+      mcpServers: { [SERVER]: arenaTools(id, arena, teams, inbox) },
       allowedTools: ARENA_TOOLS,
 
       // Strips every built-in tool, so the agent cannot touch the orchestrator host.

@@ -352,6 +352,31 @@ both the subscription and the interval on `close` or a long session leaks.
 
 ---
 
+## The account vCPU cap will kill a demo run
+
+Measured, not guessed. The Daytona account has a **hard total-vCPU limit of 10**,
+so roughly ten default sandboxes at once. Exceeding it does not queue or degrade:
+every `create` in the round fails at once with
+
+```
+Total CPU limit exceeded. Maximum allowed: 10.
+```
+
+**The trap is `KEEP_ALIVE`.** Sandboxes deliberately kept alive so preview URLs
+survive a pitch are still consuming that budget afterwards. Ten orphans
+accumulated across earlier runs took a live 4-agent round to **0/4 provisioned**.
+On stage that reads as total failure, seconds after pressing Start.
+
+Two mitigations, both in place:
+
+- `provision()` runs a **preflight** that counts existing sandboxes and warns
+  before the round starts. It warns rather than deletes, because the orphans may
+  be exactly the sandboxes behind the pitch you are about to give.
+- `pnpm --filter arena cleanup` reclaims everything, or one round by label.
+
+**Run cleanup immediately before the demo round.** It is the single cheapest
+insurance in the project.
+
 ## FakeArena is not a sandbox
 
 Worth stating plainly, because a real agent round found it the hard way.

@@ -86,6 +86,31 @@ export class DaytonaArena extends BaseArena {
   async provision(agentIds: readonly AgentId[]): Promise<AgentId[]> {
     const started = Date.now()
 
+    /**
+     * The account has a hard total-vCPU cap (10 at the time of writing, so
+     * roughly ten default sandboxes). Sandboxes left running by a previous
+     * KEEP_ALIVE round silently eat that budget, and provisioning then fails
+     * with "Total CPU limit exceeded" for every agent at once. Observed live:
+     * ten orphans from earlier runs took a whole round to 0/4.
+     *
+     * Warn loudly rather than deleting anything: the orphans might be the
+     * sandboxes behind a pitch we are about to give.
+     */
+    try {
+      let existing = 0
+      for await (const _ of this.#daytona.list()) existing++
+
+      if (existing) {
+        console.warn(
+          `[daytona] ${existing} sandbox(es) already running before this round. ` +
+            `The account caps total vCPU, so this round may fail to provision.`,
+        )
+        console.warn(`[daytona] reclaim them first: pnpm --filter arena cleanup`)
+      }
+    } catch {
+      // A failed preflight must never block a round.
+    }
+
     const results = await Promise.allSettled(
       agentIds.map(async (id) => {
         const sandbox = await this.#daytona.create({

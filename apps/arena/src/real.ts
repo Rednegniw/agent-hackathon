@@ -4,9 +4,11 @@ import { logToBraintrust } from './braintrust.js'
 import { DaytonaArena, KEEP_ALIVE } from './arena-daytona.js'
 import { FakeArena } from './arena-fake.js'
 import type { AgentId } from './events.js'
+import { Inbox } from './inbox.js'
 import { runEvaluation } from './judge.js'
 import { EventLog } from './log.js'
 import { PhaseClock } from './phases.js'
+import { TEAMS_ENABLED, TeamRoster } from './teams.js'
 import { startServer } from './server.js'
 
 /**
@@ -30,6 +32,15 @@ const log = new EventLog(runId)
 const clock = new PhaseClock()
 const arena = REAL ? new DaytonaArena(log, clock, runId) : new FakeArena(log, clock)
 
+const inbox = new Inbox()
+const teams = TEAMS_ENABLED ? new TeamRoster() : undefined
+
+/**
+ * The conversation stays open while the round is live. Once judging starts the
+ * generators close, which is what lets each query() session finish.
+ */
+const roundIsOpen = () => ['mingle', 'build', 'submit'].includes(clock.phase())
+
 startServer({ log, state: () => ({ phase: clock.phase(), tracks: arena.snapshot(), run: runId }) })
 
 clock.onPhase(async (phase) => {
@@ -38,8 +49,20 @@ clock.onPhase(async (phase) => {
 
   if (phase === 'build') {
     arena.assignStragglers(ROSTER)
+
+    if (teams) {
+      const settled = teams.settle(ROSTER)
+      for (const t of settled) {
+        log.emit({ agentId: t.owner, kind: 'team', body: `${t.id}: ${t.members.join(', ')} (owner ${t.owner})` })
+      }
+      console.log(`[teams]\n${teams.describe()}`)
+    }
+
     if (arena instanceof DaytonaArena) await arena.provision(ROSTER)
   }
+
+  /** Round over: release every parked reader so the agent sessions can close. */
+  if (phase === 'judging' || phase === 'judged') inbox.releaseAll()
 })
 
 const main = async () => {
@@ -50,7 +73,7 @@ const main = async () => {
     await Promise.all([
       clock.run(),
       ...ROSTER.map((id) =>
-        runAgent(id, arena, ROSTER.filter((o) => o !== id), MODEL, MAX_TURNS).catch((e) => {
+        runAgent(id, arena, ROSTER.filter((o) => o !== id), MODEL, MAX_TURNS, teams, inbox, roundIsOpen).catch((e) => {
           console.error(`[${id}] crashed:`, e.message)
           log.emit({ agentId: id, kind: 'thought', body: `crashed: ${e.message}` })
         }),
