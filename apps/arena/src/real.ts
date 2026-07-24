@@ -66,6 +66,7 @@ clock.onPhase(async (phase) => {
 })
 
 const main = async () => {
+  if (arena instanceof DaytonaArena) arena.installExitGuards()
   console.log(`[real] run ${runId}`)
   console.log(`[real] ${ROSTER.length} agents on ${MODEL}, arena=${REAL ? 'daytona' : 'fake'}`)
 

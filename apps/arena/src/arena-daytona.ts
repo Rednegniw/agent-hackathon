@@ -16,6 +16,13 @@ const URL_TTL_S = 3600
  */
 export const KEEP_ALIVE = process.env.KEEP_ALIVE === '1'
 
+/**
+ * Hard wall-clock lifetime for every sandbox, KEEP_ALIVE included. Long enough
+ * to build, judge and then pitch from the same round; short enough that a
+ * forgotten round cannot still be holding vCPU tomorrow.
+ */
+export const TTL_MINUTES = Number(process.env.SANDBOX_TTL_MINUTES ?? 180)
+
 class DaytonaSandbox implements AgentSandbox {
   constructor(
     private sandbox: Sandbox,
@@ -119,6 +126,16 @@ export class DaytonaArena extends BaseArena {
           // ephemeral deletes on stop; autoStopInterval is in MINUTES.
           ephemeral: !KEEP_ALIVE,
           autoStopInterval: KEEP_ALIVE ? 0 : 30,
+
+          /**
+           * The backstop that makes cleanup unconditional. ttlMinutes is
+           * wall-clock since creation and destroys the sandbox even if it is
+           * stopped, paused or archived, so nothing survives a killed process,
+           * a crashed teardown, or a KEEP_ALIVE round nobody reclaimed.
+           * Without it orphans accumulate silently until the account's vCPU
+           * cap fails an entire round at once.
+           */
+          ttlMinutes: TTL_MINUTES,
         })
 
         this.#pool.set(id, new DaytonaSandbox(sandbox, id))
@@ -142,6 +159,29 @@ export class DaytonaArena extends BaseArena {
         (KEEP_ALIVE ? ' (KEEP_ALIVE: they will outlive this process)' : ''),
     )
     return ready
+  }
+
+  /**
+   * Teardown normally lives in a finally, which a killed process never
+   * reaches. Every orphan we have accumulated came from exactly that: a run
+   * interrupted mid-round. These handlers close the gap for the signals we can
+   * catch; ttlMinutes covers SIGKILL and crashes, which we cannot.
+   */
+  installExitGuards(): void {
+    if (KEEP_ALIVE) return
+
+    let running = false
+    const bail = async (signal: string) => {
+      if (running) return
+      running = true
+
+      console.log(`\n[daytona] ${signal}: reclaiming ${this.#pool.size} sandbox(es)...`)
+      await this.teardown()
+      process.exit(130)
+    }
+
+    process.once('SIGINT', () => void bail('SIGINT'))
+    process.once('SIGTERM', () => void bail('SIGTERM'))
   }
 
   sandboxFor(agentId: AgentId): AgentSandbox {
