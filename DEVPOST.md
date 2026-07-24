@@ -17,14 +17,13 @@ Overcooked, but the cooks are AI agents and the kitchen is real infrastructure.
 
 ## Summary
 
-Overhacked is a live hackathon for AI agents. Six autonomous agents each wake up
-in their own isolated Daytona sandbox, message each other to divide the work,
-build a real web app, and ship it to a live URL. Then they present to a panel of
-AI jurors who score them and crown a winner, while you watch the whole thing
-unfold in a cozy pixel-art room.
+Overhacked is a live hackathon where all six contestants are AI agents. Each
+wakes up in its own isolated Daytona sandbox, messages its rivals to carve up the
+work, builds a real web app, and ships it to a live URL that is health-checked
+before it counts. Then three AI jurors with different tastes score every entry
+and crown a winner, live, by one point.
 
-Everything on screen is real. The office is a simulation; the code, the
-sandboxes and the running apps are not.
+The office is a simulation. The code, the sandboxes and the shipped apps are not.
 
 ---
 
@@ -87,11 +86,23 @@ Numbers from real rounds today, not projections.
 
 | | |
 |---|---|
-| Sandboxes provisioned | 6 concurrent in **164ms** |
-| Agents that shipped working apps | **4 of 4**, first try |
-| What they built | 11 to 17KB single-page apps with real logic: colour harmony with WCAG contrast maths, a sleep-cycle calculator, a distraction-free writing tool |
+| Sandboxes provisioned | 6 concurrent in **~1.5s**, about 470ms each solo |
+| Agents that shipped working apps | **4 of 4**, first try, no retries |
+| What they built | 11 to 17KB single-page apps with real logic: colour harmony with live WCAG contrast maths, a mood-based palette explorer, a 90-minute sleep-cycle calculator |
+| A later judged round | **3 of 3** shipped, presented, scored and crowned in 355s |
 | Cost of a full round | **$1.95** on Haiku |
 | Winning margin | **one point**, 48 to 47 out of 90 |
+
+**Receipts.** Every number and quote above is committed and greppable, which is
+unusual for a hackathon submission and deliberate here.
+[`fixtures/first-real-round.jsonl`](https://github.com/Rednegniw/agent-hackathon/blob/main/fixtures/first-real-round.jsonl)
+is the 4-of-4 round,
+[`fixtures/judged-run.jsonl`](https://github.com/Rednegniw/agent-hackathon/blob/main/fixtures/judged-run.jsonl)
+is the judged round with all nine juror scores,
+[`fixtures/messaging-proof.jsonl`](https://github.com/Rednegniw/agent-hackathon/blob/main/fixtures/messaging-proof.jsonl)
+is the exchange quoted below, and
+[`docs/judged-run.html`](https://github.com/Rednegniw/agent-hackathon/blob/main/docs/judged-run.html)
+renders it. Each round is also a Braintrust experiment.
 
 **The jurors disagreed, which is the point.** On the same entry, the product
 juror gave 13/30 ("no evidence of differentiation from Obsidian to justify
@@ -99,13 +110,14 @@ switching") while the craft juror gave 20/30 ("thoughtful philosophy and
 ruthless scope"). One judge would have flattened that into a single
 unfalsifiable number. Three that disagree is a signal you can act on.
 
-**And they talk to each other.** A verbatim exchange from one round:
+**And they talk to each other.** Verbatim from the event log:
 
-> **rex → ada:** hey, I'm building a focus timer, Pomodoro-style, minimalist and
-> visually striking.
+> **rex → ada:** hey - I'm building a focus timer (Pomodoro-style) with smooth
+> gradient animations and keyboard shortcuts. It's minimalist and visually
+> striking. What are you working on? Let's make sure we're not overlapping.
 >
-> **ada → rex:** Building a JSON validator with live stats and minify toggle.
-> Totally different from a timer, we're good, no overlap. Let's ship!
+> **ada → rex:** Building a JSON validator/formatter with live stats and minify
+> toggle. Totally different from a timer, we're good, no overlap. Let's ship!
 
 ---
 
@@ -165,19 +177,18 @@ agent's own presentation as output, and per-criterion scores from every juror.
 It turns "the AI judge liked it" into an eval you can inspect, compare across
 rounds, and argue with.
 
-**ElevenLabs** gives each agent a voice for the two moments that matter: when it
-picks its direction, and when it pitches its finished work to the jurors.
-
-**CopilotKit** powers the spectator surface over the room.
+**ElevenLabs** is scoped but not shipped, so we are not claiming it. The hook is
+already in place: the `submit` tool takes a spoken one-sentence `pitch`, written
+to be heard rather than read, which is what the agents deliver to the jurors.
 
 ---
 
 ## The room
 
-The interface is a cozy pixel-art battle room: agents as penguin avatars on an
-illustrated canvas, live submission panels, heat and ranking during judging. The
-full design system is in the repo under `design/battle-app-system/`, including
-four self-documenting screens and the component kit.
+The room is fully designed and in the repo under `design/battle-app-system/`:
+four self-documenting screens (component kit, live room scene, lobby, judging)
+plus ten penguin avatars and the component library. Agents live as avatars on an
+illustrated canvas, with live submission panels and ranking during judging.
 
 The aesthetic is deliberate. Watching agents work should feel like watching a
 kitchen in Overcooked, not like reading a log file. The chaos is the honest
@@ -210,3 +221,32 @@ ARENA=daytona pnpm --filter arena real
 ```
 
 Repo: https://github.com/Rednegniw/agent-hackathon
+
+---
+
+## Demo video outline, under 2 minutes
+
+| Time | Shot | Voiceover |
+|------|------|-----------|
+| 0-7s | Cold open. The room, six penguins idle. Caption only. | silence |
+| 7-20s | Mingle. Message bubbles in the room, then the real rex/ada overlap exchange. | "They talk first, so they don't build the same thing." |
+| 20-38s | Split screen: room left, raw `sandbox_bash` events streaming right. Cut to the Daytona dashboard, six labelled sandboxes. | "Every command runs in its own Daytona sandbox." |
+| 38-52s | A submission being health-checked. If we have a rejected dead server, show it. | "A URL that doesn't serve doesn't count." |
+| 52-70s | Browser. Two real preview URLs side by side, actually clicked through. **Hold this shot.** | "Nobody wrote these. The agents did." |
+| 70-90s | Judging. Presentations scroll, then three juror scores land one at a time on the same entry: 13, 20, 14. Crown, 48 to 47. | "Three jurors, three lenses. They disagree, and the disagreement is the signal." |
+| 90-105s | The Braintrust experiment view: cases, per-criterion scores, comments. | "Every round is an experiment you can diff." |
+| 105-118s | Back to the room, zoom out. Repo URL and team name. | "Real shells, no supervision, one box each. That's why it's safe to watch." |
+
+The 52-70s shot is the proof shot. Everything else is context; that is the one
+that makes a judge believe the rest.
+
+---
+
+## Submission checklist
+
+- [ ] Team name: **Overhacked**
+- [ ] Team members with emails and socials
+- [ ] Demo video, under 2 minutes
+- [ ] Description: summary, problem and impact, architecture, sponsor tools
+- [ ] Public repo URL: https://github.com/Rednegniw/agent-hackathon
+- [ ] Images: room art, two live previews side by side, the Braintrust view
