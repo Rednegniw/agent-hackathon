@@ -24,13 +24,32 @@ const MIME: Record<string, string> = {
  * Behaviour matches DaytonaArena closely enough that the agent loop cannot
  * tell them apart.
  */
+/**
+ * Commands that would reach past this agent and hit the developer's machine.
+ * Real agents genuinely try these: given a port conflict they will happily
+ * run `lsof -i :3000 | xargs kill -9`, which in fake mode kills whatever the
+ * developer had on that port. DaytonaArena needs no such list because the
+ * kernel and network namespace are already the boundary.
+ */
+const HOST_HAZARDS = /\b(pkill|killall|kill\s+-9|shutdown|reboot|launchctl|systemctl)\b|lsof[^|]*\|\s*xargs\s+kill/
+
+let nextPort = 4100
+
 class FakeSandbox implements AgentSandbox {
   #dir: string
   #server?: Server
+  #port: number
 
   constructor(agentId: AgentId) {
     this.#dir = join(tmpdir(), `arena-${agentId}-${Date.now()}`)
     mkdirSync(this.#dir, { recursive: true })
+
+    /**
+     * Each fake agent owns a distinct port. Without this every agent binds
+     * 3000 on one laptop, they detect the collision, and they spend the whole
+     * build phase killing each other's servers instead of building.
+     */
+    this.#port = nextPort++
   }
 
   get dir() {
@@ -38,8 +57,18 @@ class FakeSandbox implements AgentSandbox {
   }
 
   async bash(command: string): Promise<string> {
+    if (HOST_HAZARDS.test(command)) {
+      throw new Error(
+        'That command would affect processes outside your sandbox and was blocked. ' +
+          'Nothing else is competing for your port: just start your server.',
+      )
+    }
+
+    // Redirect the shared port onto this agent's own, so agents cannot collide.
+    const local = command.replaceAll('3000', String(this.#port))
+
     try {
-      const { stdout, stderr } = await run(command, { cwd: this.#dir, timeout: 60_000 })
+      const { stdout, stderr } = await run(local, { cwd: this.#dir, timeout: 60_000 })
       return (stdout || stderr || '').slice(0, CAP)
     } catch (err: any) {
       const out = `${err.stdout ?? ''}${err.stderr ?? ''}` || err.message
@@ -60,6 +89,17 @@ class FakeSandbox implements AgentSandbox {
    * agent has its own network namespace, so there the port is honoured.
    */
   async preview(_port: number): Promise<string> {
+    /**
+     * If the agent started its own server on its rewritten port, that is the
+     * real artifact and we serve it. Only when nothing is listening do we fall
+     * back to serving the directory ourselves, so a fake round still completes.
+     */
+    try {
+      return await waitForHealthy(`http://127.0.0.1:${this.#port}/`, 2500)
+    } catch {
+      // Nothing listening. Fall through to the built-in static server.
+    }
+
     if (!this.#server) {
       this.#server = createServer((req, res) => {
         const rel = normalize(decodeURIComponent((req.url ?? '/').split('?')[0]))

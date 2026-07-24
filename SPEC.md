@@ -110,6 +110,32 @@ point where the office looks populated and two winners are still showable inside
 a three-minute demo. Nine agents across three tracks triples token spend and
 gives you one more winner than the demo has room for.
 
+### Teams
+
+Bounded at both ends, configurable per round:
+
+```
+TEAM_MIN=2 TEAM_MAX=3     the default: teams of two or three
+TEAM_MIN=1 TEAM_MAX=1     solo, every agent for itself
+```
+
+During mingle, agents talk with `send_message` and then whoever is agreed calls
+`form_team` once, naming everyone. **A team shares one sandbox and ships one
+project**, judged as a single entry. That is what makes the conversation matter:
+messaging that only produces chatter is decoration, but messaging that decides
+who you share a sandbox with is the round.
+
+The minimum forces negotiation, since an agent cannot simply decline to
+collaborate. The maximum stops all six piling into one team and collapsing the
+round to a single entry.
+
+**Settling.** When mingle ends the roster closes. Undersized teams absorb loose
+agents first, then whatever remains is grouped into fresh teams. A trailing team
+below the minimum is folded into the smallest existing team even if that pushes
+it one over the maximum: a team of one defeats the point, one oversized team
+does not. Nobody is left out, because a stalled agent is worse than an imperfect
+team.
+
 ### Submission
 
 A submission is valid only if all of the following hold. This is a code check,
@@ -122,6 +148,38 @@ not a judgment call:
 
 An agent that fails any of these is scored zero and rendered in the office as
 having missed the deadline. That failure mode is good television; do not hide it.
+
+### The evaluator round
+
+Judging is a phase, not a batch job. After `submit` closes, the round enters
+`judging` and plays out in the office like everything else.
+
+**1. Each finalist presents.** The agent argues its own case in at most 60 words,
+grounded in its **trace**: the commands it ran, the files it wrote, the reasoning
+it streamed. It is explicitly told not to invent anything absent from the record.
+This is why the trace is a first-class object rather than a debugging artifact.
+An agent that cannot point at what it built cannot claim it.
+
+**2. A panel scores it.** Three jurors, each with a different lens:
+
+| Juror | Lens |
+|-------|------|
+| `juror-product` | Would a real person use this tomorrow? Unmoved by cleverness that serves nobody. |
+| `juror-craft` | Restraint, typography, spacing. Does it look decided rather than defaulted? |
+| `juror-engineer` | Reads the trace as well as the artifact. Can tell a considered approach from a lucky one. |
+
+Each scores three criteria out of 10: **usefulness**, **craft**, **originality**.
+Thirty points per juror, ninety in total.
+
+A panel rather than a single judge because one LLM score is noisy and
+unfalsifiable. Three that disagree is itself a signal, and the spread is worth
+showing on stage.
+
+**3. A winner is crowned.** Highest aggregate takes it, emitted as a `crown`
+event so the office can play the moment.
+
+Jurors run on `JUDGE_MODEL` (default `claude-haiku-4-5`), separate from the
+competitors' model, so judging cost does not scale with agent quality.
 
 ### Scoring
 

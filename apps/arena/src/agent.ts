@@ -4,11 +4,13 @@ import type { Arena } from './arena.js'
 import { TRACKS, type AgentId } from './events.js'
 import { refuse } from './phases.js'
 import { LANES_DIFFER, THEMES, TOPIC, describeTopic } from './topic.js'
+import { TEAM_MAX, TEAM_MIN, type TeamRoster } from './teams.js'
 
 /** Tool names as Claude sees them: mcp__{server}__{tool}. */
 const SERVER = 'arena'
 export const ARENA_TOOLS = [
   'pick_theme',
+  'form_team',
   'sandbox_bash',
   'sandbox_write',
   'send_message',
@@ -30,7 +32,7 @@ const ok = (text: string) => ({ content: [{ type: 'text' as const, text }] })
 const err = (text: string) => ({ content: [{ type: 'text' as const, text }], isError: true })
 
 /** The five tools. Every one is phase-gated by the arena, not by the prompt. */
-function arenaTools(agentId: AgentId, arena: Arena) {
+function arenaTools(agentId: AgentId, arena: Arena, teams?: TeamRoster) {
   const gate = (name: string, allowed: string[]) => {
     const phase = arena.phase()
     return allowed.includes(phase) ? null : refuse(name, phase)
@@ -96,6 +98,31 @@ function arenaTools(agentId: AgentId, arena: Arena) {
           } catch (e) {
             return err((e as Error).message)
           }
+        },
+      ),
+
+      tool(
+        'form_team',
+        `Team up with other agents. Teams hold ${TEAM_MIN} to ${TEAM_MAX} agents and share one ` +
+          `sandbox, so a team ships one project together and is judged as one entry. ` +
+          `Talk to the others with send_message first, then whoever is agreed calls this once ` +
+          `naming everyone. Anyone still teamless when mingle ends is grouped automatically.`,
+        { members: z.array(z.string()).describe('Every agent on the team, including yourself') },
+        async ({ members }) => {
+          const blocked = gate('form_team', ['mingle'])
+          if (blocked) return err(blocked)
+          if (!teams) return err('Teams are disabled this round. Build solo.')
+
+          const others = members.filter((m) => m !== agentId) as AgentId[]
+          const res = teams.form(agentId, others)
+          if (!res.ok) return err(res.reason)
+
+          arena.emit({
+            agentId,
+            kind: 'team',
+            body: `${res.team.id}: ${res.team.members.join(', ')}`,
+          })
+          return ok(`Formed ${res.team.id} with ${res.team.members.join(', ')}. You own the sandbox.`)
         },
       ),
 
@@ -183,13 +210,14 @@ export async function runAgent(
   rivals: AgentId[],
   model: string,
   maxTurns: number,
+  teams?: TeamRoster,
 ): Promise<void> {
   const res = query({
     prompt: `The round has started. You are ${id}. Pick your theme now, then build and submit.`,
     options: {
       model,
       systemPrompt: systemPrompt(id, rivals),
-      mcpServers: { [SERVER]: arenaTools(id, arena) },
+      mcpServers: { [SERVER]: arenaTools(id, arena, teams) },
       allowedTools: ARENA_TOOLS,
 
       // Strips every built-in tool, so the agent cannot touch the orchestrator host.

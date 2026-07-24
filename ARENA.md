@@ -352,6 +352,30 @@ both the subscription and the interval on `close` or a long session leaks.
 
 ---
 
+## FakeArena is not a sandbox
+
+Worth stating plainly, because a real agent round found it the hard way.
+
+`FakeArena` runs `bash` on the **developer's machine**. With scripted agents that
+is harmless. With real agents it is not: three Haiku agents each tried to bind
+port 3000 on one laptop, detected the collision, and spent 12 of their 68 tool
+calls running `lsof -i :3000 | xargs kill -9` at each other. They burned the
+build phase fighting over a port, and those kills landed on the host.
+
+Two guards, both in `arena-fake.ts`:
+
+- **Each fake agent owns a distinct port**, and `bash` rewrites `3000` onto it,
+  so agents cannot collide in the first place.
+- **Host-hazardous commands are refused** (`pkill`, `killall`, `kill -9`,
+  `lsof | xargs kill`, `shutdown`, `systemctl`) with an error that tells the
+  agent nothing is competing for its port.
+
+`DaytonaArena` needs neither guard, because a dedicated kernel and network
+namespace already are the boundary. That contrast is worth keeping in mind: the
+fake arena is a development convenience, and **real agents belong in real
+sandboxes**. Use `ARENA=fake` for the office and the event plumbing, and
+`ARENA=daytona` whenever a model is in the loop.
+
 ## FakeArena
 
 Ship this first. It is what unblocks Patrik.

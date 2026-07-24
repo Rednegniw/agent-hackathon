@@ -24,7 +24,8 @@ export type EventKind =
   | 'thought' // agent reasoning, streamed from the assistant turn
   | 'message' // agent to agent, always mediated by the orchestrator
   | 'build' // a command ran or a file was written
-  | 'theme' // agent claimed a track
+  | 'theme' // agent claimed a lane
+  | 'team' // agents formed a team
   | 'submit' // agent shipped, carries previewUrl
   | 'present' // agent's case to the judges, argued from its own trace
   | 'verdict' // one juror's score for one agent
