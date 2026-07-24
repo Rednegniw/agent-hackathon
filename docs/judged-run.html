@@ -1,0 +1,260 @@
+<title>The evaluator round</title>
+<style>
+  :root {
+    --paper:#eef1f5; --card:#f7f9fb; --ink:#161a21; --muted:#646e7e; --rule:#d5dce4;
+    --gold:#9a6b12; --ok:#1c7a52; --warn:#b4610f; --cold:#2c46b8; --sys:#7b8493;
+    --mono: ui-monospace,"SF Mono",SFMono-Regular,"Cascadia Code",Menlo,Consolas,monospace;
+    --sans: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper:#11141a; --card:#171b23; --ink:#e4e8ee; --muted:#8b95a5; --rule:#262d38;
+      --gold:#e0b04a; --ok:#4fc08d; --warn:#e8954a; --cold:#7c93ff; --sys:#6b7484; }
+  }
+  :root[data-theme="dark"] { --paper:#11141a; --card:#171b23; --ink:#e4e8ee; --muted:#8b95a5;
+    --rule:#262d38; --gold:#e0b04a; --ok:#4fc08d; --warn:#e8954a; --cold:#7c93ff; --sys:#6b7484; }
+  :root[data-theme="light"] { --paper:#eef1f5; --card:#f7f9fb; --ink:#161a21; --muted:#646e7e;
+    --rule:#d5dce4; --gold:#9a6b12; --ok:#1c7a52; --warn:#b4610f; --cold:#2c46b8; --sys:#7b8493; }
+
+  body { background:var(--paper); color:var(--ink); font-family:var(--sans);
+    line-height:1.5; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1000px; margin:0 auto; padding:48px 24px 96px;
+    display:flex; flex-direction:column; gap:44px; }
+  .label { font-family:var(--mono); font-size:11px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--muted); }
+  header { display:flex; flex-direction:column; gap:14px; }
+  h1 { font-size:clamp(28px,4.5vw,42px); font-weight:640; letter-spacing:-.025em;
+    text-wrap:balance; margin:0; }
+  .lede { max-width:64ch; color:var(--muted); font-size:15px; margin:0; }
+  .lede strong { color:var(--ink); font-weight:600; }
+  section { display:flex; flex-direction:column; gap:14px; }
+  h2 { font-size:13px; font-weight:600; margin:0; }
+
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); gap:1px;
+    background:var(--rule); border:1px solid var(--rule); border-radius:3px; overflow:hidden; }
+  .stat { background:var(--card); padding:14px 16px; display:flex; flex-direction:column; gap:3px; }
+  .stat b { font-family:var(--mono); font-size:21px; font-weight:600;
+    font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+
+  /* Scoreboard: the hero */
+  .board { border:1px solid var(--rule); border-radius:3px; background:var(--card); overflow-x:auto; }
+  table.matrix { border-collapse:collapse; width:100%; min-width:640px; }
+  table.matrix th { padding:12px 14px; text-align:left; font-size:10px; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--muted); font-weight:500; border-bottom:1px solid var(--rule); }
+  table.matrix th.n, table.matrix td.n { text-align:center; }
+  table.matrix td { padding:0; border-bottom:1px solid var(--rule); vertical-align:top; }
+  table.matrix tr:last-child td { border-bottom:0; }
+
+  .who { padding:14px; display:flex; flex-direction:column; gap:3px; min-width:150px; }
+  .who .nm { font-family:var(--mono); font-size:14px; font-weight:600; display:flex; align-items:center; gap:7px; }
+  .who .pitch { font-size:12px; color:var(--muted); }
+  .crown { color:var(--gold); font-size:13px; }
+
+  .cell { padding:12px 10px; display:flex; flex-direction:column; gap:5px; align-items:center;
+    border-left:1px solid var(--rule); }
+  .val { font-family:var(--mono); font-size:19px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .bar { width:100%; height:3px; border-radius:2px; background:color-mix(in srgb,var(--muted) 20%,transparent); overflow:hidden; }
+  .bar i { display:block; height:100%; border-radius:2px; }
+  .cmt { font-size:11px; color:var(--muted); line-height:1.4; text-align:left; }
+  .abstain .val { color:var(--warn); font-size:12px; font-weight:500; }
+
+  .total { padding:14px; text-align:center; border-left:1px solid var(--rule); }
+  .total .val { font-size:24px; }
+  .total .of { font-size:11px; color:var(--muted); font-family:var(--mono); }
+
+  /* Presentations */
+  .speeches { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }
+  .speech { border:1px solid var(--rule); border-radius:3px; background:var(--card);
+    padding:16px; display:flex; flex-direction:column; gap:9px; }
+  .speech .nm { font-family:var(--mono); font-size:13px; font-weight:600; }
+  .speech q { font-size:14px; font-style:normal; quotes:'"' '"'; }
+  .speech .url { font-family:var(--mono); font-size:10px; color:var(--muted); word-break:break-all; }
+
+  .note { border-left:3px solid var(--warn); padding:14px 18px; background:var(--card);
+    border-radius:0 3px 3px 0; font-size:14px; }
+  .note b { color:var(--warn); }
+
+  .logwrap { border:1px solid var(--rule); border-radius:3px; background:var(--card); overflow-x:auto; }
+  table.log { border-collapse:collapse; width:100%; font-family:var(--mono); font-size:12px; min-width:600px; }
+  table.log th { text-align:left; padding:9px 12px; font-size:10px; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--muted); font-weight:500; border-bottom:1px solid var(--rule);
+    position:sticky; top:0; background:var(--card); }
+  table.log td { padding:5px 12px; border-bottom:1px solid color-mix(in srgb,var(--rule) 55%,transparent);
+    vertical-align:top; }
+  .num { font-variant-numeric:tabular-nums; text-align:right; color:var(--muted); white-space:nowrap; }
+  tr.k-phase td { background:color-mix(in srgb,var(--muted) 8%,transparent); font-weight:600; }
+  tr.k-submit td { background:color-mix(in srgb,var(--ok) 8%,transparent); }
+  tr.k-crown td { background:color-mix(in srgb,var(--gold) 14%,transparent); font-weight:600; }
+  tr.k-present td { background:color-mix(in srgb,var(--cold) 7%,transparent); }
+  .kind { color:var(--muted); white-space:nowrap; }
+
+  code { font-family:var(--mono); font-size:.92em;
+    background:color-mix(in srgb,var(--muted) 12%,transparent); padding:1px 5px; border-radius:2px; }
+  footer { border-top:1px solid var(--rule); padding-top:18px; color:var(--muted); font-size:13px; }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="label">Evaluator round &middot; live Daytona &middot; claude-haiku-4-5</div>
+    <h1>Three agents built, three jurors judged, one point decided it</h1>
+    <p class="lede">
+      The full loop, end to end: agents pick a lane, build in isolated sandboxes, ship a live URL,
+      then <strong>present their own case</strong> argued from their trace. A panel of three jurors
+      scores each independently and a winner is crowned. Every number below came out of one real run.
+    </p>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <section>
+    <h2>The scoreboard</h2>
+    <p class="lede">
+      Three jurors, three criteria each, ten points apiece. The interesting part is not the totals,
+      it is the <strong>disagreement</strong>: the product juror and the craft juror differ by seven
+      points on the same entry. A single judge would have hidden that.
+    </p>
+    <div class="board">
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Agent</th>
+            <th class="n">juror-product</th>
+            <th class="n">juror-craft</th>
+            <th class="n">juror-engineer</th>
+            <th class="n">Total</th>
+          </tr>
+        </thead>
+        <tbody id="matrix"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="note">
+    <b>One juror failed, and it mattered.</b> <code>juror-craft</code> returned prose instead of
+    JSON when scoring juno, and the parser defaulted it to <code>0/30</code>. That penalises the
+    competitor for the judge's malfunction, and with a one-point margin at the top it could have
+    flipped the winner outright. Jurors now retry once and then abstain, with the aggregate taken
+    as the mean of those who actually scored.
+  </div>
+
+  <section>
+    <h2>What each agent argued</h2>
+    <p class="lede">
+      Presentations are generated from each agent's own trace, with an explicit instruction not to
+      claim anything absent from the record. An agent that cannot point at what it built cannot
+      claim it.
+    </p>
+    <div class="speeches" id="speeches"></div>
+  </section>
+
+  <section>
+    <h2>Full log</h2>
+    <div class="logwrap">
+      <table class="log">
+        <thead><tr><th class="num">seq</th><th class="num">t+s</th><th>agent</th><th>kind</th><th>body</th></tr></thead>
+        <tbody id="log"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    Run <code>2026-07-24T20-23-05-353Z</code>, logged to Braintrust as an experiment with one case
+    per finalist. The sandboxes behind those preview URLs were reclaimed at teardown, so the links
+    are a record of what was served rather than a live demo. Keeping them alive for a pitch is what
+    <code>KEEP_ALIVE=1</code> is for.
+  </footer>
+</div>
+
+<script>
+  const AGENTS = [
+    { id:'ada', total:48, rank:1,
+      pitch:'A distraction-free writing companion with real-time word counting, timed sprints, and goal tracking.',
+      url:'3000-la0kbakqpc1gfyye.daytonaproxy01.net',
+      speech:"Draft strips the noise. A single-page writing companion with real-time word counts, timed sprints, goal tracking, all auto-saved locally. Monospace. Minimal. Fast. Built on principle: writers don't need features, they need distraction-free focus and persistent auto-save.",
+      scores:{ 'juror-product':[13,'Addresses a real need but offers no reason to switch from Notion, Bear, or iA Writer.'],
+               'juror-craft':[19,'Proven utility with genuine restraint; austere single-file approach (9.7KB) shows deliberate design.'],
+               'juror-engineer':[16,'Thoughtful positioning, but the trace shows no iteration: shipping the first draft rather than an evolved design.'] } },
+    { id:'vera', total:47, rank:2,
+      pitch:'A beautifully minimal, offline-first markdown notebook with persistent local storage.',
+      url:'3000-rxi95lhlv1wopn2k.daytonaproxy01.net',
+      speech:"Vault is a single-file, offline-first markdown notebook. No accounts, no syncing, pure local storage. Real writers need their tool invisible: open, write, close. Markdown because writers already use it. Single-page because constraints force intentional design.",
+      scores:{ 'juror-product':[13,'Competent niche product but no evidence of differentiation from Obsidian to justify switching.'],
+               'juror-craft':[20,'Thoughtful philosophy and ruthless scope, but I cannot judge typography and spacing without seeing it run.'],
+               'juror-engineer':[14,'Incomplete trace reasoning and zero UI verification suggest it shipped untested.'] } },
+    { id:'juno', total:35, rank:3,
+      pitch:'Paste text to instantly see reading time, then use the built-in Pomodoro timer.',
+      url:'3000-ud6l9eqkvqjjki3h.daytonaproxy01.net',
+      speech:"ReadSpan: paste text, instantly see reading time, use the Pomodoro timer to stay focused. Single-page HTML, minimalist, self-contained. It solves the genuine problem everyone has: how long will this take to read?",
+      scores:{ 'juror-product':[16,'Pairs two familiar tools sensibly, but reading-time calculators are commoditized.'],
+               'juror-craft':[null,'Returned prose instead of JSON. Defaulted to zero, which is the bug this run found.'],
+               'juror-engineer':[19,'Competent execution and genuinely useful, but combines two familiar tools without a surprising angle.'] } },
+  ];
+
+  const JURORS = ['juror-product','juror-craft','juror-engineer'];
+  const el = (t,c,x) => { const n=document.createElement(t); if(c)n.className=c; if(x!=null)n.textContent=x; return n; };
+
+  /* Stats */
+  const stats = [['finalists',3],['jurors',3],['scores cast','8/9'],['top margin','1 pt'],
+                 ['round length','355s'],['agent cost','$1.19']];
+  const se = document.getElementById('stats');
+  for (const [k,v] of stats) { const d=el('div','stat'); d.append(el('b',null,String(v)),el('span','label',k)); se.append(d); }
+
+  /* Scoreboard */
+  const hue = (n) => n >= 19 ? 'var(--ok)' : n >= 15 ? 'var(--cold)' : 'var(--warn)';
+  const mx = document.getElementById('matrix');
+
+  for (const a of AGENTS) {
+    const tr = el('tr');
+
+    const who = el('td'); const w = el('div','who');
+    const nm = el('div','nm');
+    nm.append(el('span',null,a.id));
+    if (a.rank === 1) { const c = el('span','crown','★'); c.title = 'winner'; nm.append(c); }
+    w.append(nm, el('div','pitch',a.pitch));
+    who.append(w); tr.append(who);
+
+    for (const j of JURORS) {
+      const [val, cmt] = a.scores[j];
+      const td = el('td','n');
+      const cell = el('div','cell' + (val === null ? ' abstain' : ''));
+
+      cell.append(el('div','val', val === null ? 'no score' : val + '/30'));
+      if (val !== null) {
+        const bar = el('div','bar'); const i = el('i');
+        i.style.width = (val/30*100) + '%'; i.style.background = hue(val);
+        bar.append(i); cell.append(bar);
+      }
+      cell.append(el('div','cmt', cmt));
+      td.append(cell); tr.append(td);
+    }
+
+    const tot = el('td','total');
+    const tv = el('div','val', String(a.total));
+    if (a.rank === 1) tv.style.color = 'var(--gold)';
+    tot.append(tv, el('div','of','of 90'));
+    tr.append(tot);
+
+    mx.append(tr);
+  }
+
+  /* Presentations */
+  const sp = document.getElementById('speeches');
+  for (const a of AGENTS) {
+    const c = el('div','speech');
+    c.append(el('div','nm', a.id));
+    const q = el('q'); q.textContent = a.speech; c.append(q);
+    c.append(el('div','url', a.url));
+    sp.append(c);
+  }
+
+  /* Log */
+  const EVENTS = [{"s":1,"t":0,"a":"system","k":"phase","b":"mingle"},{"s":2,"t":6.29,"a":"vera","k":"theme","b":"alpha"},{"s":3,"t":13.4,"a":"vera","k":"thought","b":"Good. I'm in alpha. Now I need to build something genuinely useful and minimal. Let me think contrarian: most hackathon sites are portfolios, demo app"},{"s":4,"t":16.97,"a":"juno","k":"thought","b":"I'll pick the alpha theme now and then build something genuinely useful."},{"s":5,"t":17.16,"a":"juno","k":"theme","b":"alpha"},{"s":6,"t":17.91,"a":"ada","k":"thought","b":"I'll pick a theme and build something genuinely useful."},{"s":7,"t":17.91,"a":"ada","k":"theme","b":"alpha"},{"s":8,"t":18.01,"a":"system","k":"phase","b":"build"},{"s":9,"t":22.19,"a":"juno","k":"thought","b":"Good. Now I'm in alpha lane. Let me build something genuinely useful: a **reading time estimator + focus timer hybrid**. People actually use these. It"},{"s":10,"t":24.58,"a":"ada","k":"thought","b":"Good. I'm in alpha. Now I need to build something genuinely useful, minimalist, and visually considered. Let me think about what real people actually "},{"s":11,"t":41.56,"a":"vera","k":"build","b":"wrote app/index.html (10882b)"},{"s":12,"t":49.11,"a":"vera","k":"thought","b":"Now let me start the server and verify it works:"},{"s":13,"t":49.79,"a":"vera","k":"build","b":"cd ~/app && nohup python3 -m http.server 3000 >/tmp/serve.log 2>&1 & sleep 1; echo up"},{"s":14,"t":49.91,"a":"ada","k":"build","b":"wrote app/index.html (9726b)"},{"s":15,"t":50.23,"a":"juno","k":"build","b":"wrote app/index.html (10153b)"},{"s":16,"t":52.89,"a":"ada","k":"thought","b":"Now let me start the server:"},{"s":17,"t":53.3,"a":"juno","k":"thought","b":"Now let me start the server on port 3000:"},{"s":18,"t":53.48,"a":"ada","k":"build","b":"cd ~/app && nohup python3 -m http.server 3000 >/tmp/serve.log 2>&1 & sleep 1; echo up"},{"s":19,"t":53.79,"a":"juno","k":"build","b":"cd ~/app && nohup python3 -m http.server 3000 >/tmp/serve.log 2>&1 & sleep 1; echo up"},{"s":20,"t":53.79,"a":"vera","k":"build","b":"curl -s http://localhost:3000/ | head -20"},{"s":21,"t":56.09,"a":"vera","k":"thought","b":"Perfect. Server is running and serving the HTML. Now let me submit:"},{"s":22,"t":56.53,"a":"ada","k":"thought","b":"Perfect. Now let me verify it's working:"},{"s":23,"t":56.67,"a":"ada","k":"build","b":"curl -s http://localhost:3000 | head -20"},{"s":24,"t":57.04,"a":"juno","k":"thought","b":"Good. Now let me verify the server is running:"},{"s":25,"t":57.26,"a":"juno","k":"build","b":"curl -s http://localhost:3000/index.html | head -20"},{"s":26,"t":58,"a":"vera","k":"submit","b":"A beautifully minimal, offline-first markdown notebook that keeps your thoughts in a clean, distraction-free interface with persistent local storage."},{"s":27,"t":59.82,"a":"juno","k":"thought","b":"Perfect. The server is running and serving the page. Now let me submit:"},{"s":28,"t":60.19,"a":"ada","k":"thought","b":"Excellent. Server is running and responding. Now submitting:"},{"s":29,"t":61.39,"a":"juno","k":"submit","b":"Paste text to instantly see reading time, then use the built-in Pomodoro timer to stay focused while you read."},{"s":30,"t":61.78,"a":"vera","k":"thought","b":"**Submitted.** I built **Vault**—a minimal, offline-first markdown notebook designed for distraction-free writing. The approach was deliberately contr"},{"s":31,"t":62.15,"a":"ada","k":"submit","b":"A distraction-free writing companion with real-time word counting, timed sprints, and goal tracking that saves automatically to localStorage."},{"s":32,"t":65.83,"a":"ada","k":"thought","b":"Done. I built **Draft**, a minimal writing companion for real writers. It includes: - **Distraction-free editor** with monospace font and subtle styli"},{"s":33,"t":67.21,"a":"juno","k":"thought","b":"Done! I've built and submitted **ReadSpan** to the alpha lane. ## What I built: **ReadSpan** is a single-page reading time estimator + focus timer. It"},{"s":34,"t":162.85,"a":"system","k":"phase","b":"submit"},{"s":35,"t":186.85,"a":"system","k":"phase","b":"judged"},{"s":36,"t":186.86,"a":"system","k":"phase","b":"judging 3 finalists with 3 jurors"},{"s":37,"t":211.53,"a":"ada","k":"present","b":"Draft strips the noise. A single-page writing companion with real-time word counts, timed sprints, goal tracking—all auto-saved locally. Monospace. Mi"},{"s":38,"t":217.84,"a":"vera","k":"present","b":"Vault is a single-file, offline-first markdown notebook. No accounts, no syncing—pure local storage. I built this because real writers need their tool"},{"s":39,"t":224.94,"a":"juno","k":"present","b":"ReadSpan: paste text, instantly see reading time, use the Pomodoro timer to stay focused. Single-page HTML, minimalist, self-contained. It solves the "},{"s":40,"t":261.19,"a":"vera","k":"verdict","b":"juror-product: 13/30 - Competent niche product but no evidence of differentiation from Obsidian or delightful design to justify switching."},{"s":41,"t":268.07,"a":"vera","k":"verdict","b":"juror-craft: 20/30 - Thoughtful philosophy and ruthless scope—but I cannot judge typography, spacing, and visual weight without seeing it run."},{"s":42,"t":268.62,"a":"vera","k":"verdict","b":"juror-engineer: 14/30 - Solid concept with constraint-awareness, but incomplete trace reasoning and zero UI verification suggest it shipped untested—l"},{"s":43,"t":288.85,"a":"juno","k":"verdict","b":"juror-engineer: 19/30 - Competent execution—reading time + Pomodoro is genuinely useful and the minimalist approach is sound—but combines two familiar"},{"s":44,"t":295.45,"a":"juno","k":"verdict","b":"juror-product: 16/30 - Pairs two familiar tools sensibly, but reading-time calculators and Pomodoro timers are commoditized—the problem isn't compelli"},{"s":45,"t":296.66,"a":"juno","k":"verdict","b":"juror-craft: 0/30 - (no comment)"},{"s":46,"t":322.23,"a":"ada","k":"verdict","b":"juror-product: 13/30 - Addresses a real need but offers no reason to switch from Notion, Bear, or iA Writer—localStorage-only, no sync, no export, no "},{"s":47,"t":327.48,"a":"ada","k":"verdict","b":"juror-engineer: 16/30 - Thoughtful principle-driven positioning, but the feature set (word count + sprint timer + auto-save) is familiar, and the trac"},{"s":48,"t":351.19,"a":"ada","k":"verdict","b":"juror-craft: 19/30 - Proven utility with genuine restraint; austere single-file approach (9.7KB) shows deliberate design, though category lacks novelt"},{"s":49,"t":351.19,"a":"ada","k":"score","b":"rank 1 of 3, 48/90"},{"s":50,"t":351.19,"a":"vera","k":"score","b":"rank 2 of 3, 47/90"},{"s":51,"t":351.19,"a":"juno","k":"score","b":"rank 3 of 3, 35/90"},{"s":52,"t":351.19,"a":"ada","k":"crown","b":"ada wins with 48 points"},{"s":53,"t":355.04,"a":"system","k":"score","b":"round complete, 3/3 submitted"}];
+  const log = document.getElementById('log');
+  for (const e of EVENTS) {
+    const tr = el('tr','k-' + e.k);
+    tr.append(el('td','num',e.s), el('td','num',e.t.toFixed(1)),
+      el('td',null,e.a), el('td','kind',e.k));
+    tr.append(el('td',null, e.k === 'phase' ? 'phase: ' + e.b : e.b));
+    log.append(tr);
+  }
+</script>

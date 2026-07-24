@@ -1,0 +1,293 @@
+<title>First real agent round</title>
+<style>
+  :root {
+    --paper: #eef1f5; --card: #f7f9fb; --ink: #161a21; --muted: #646e7e;
+    --rule: #d5dce4; --time: #2c46b8; --color: #b4610f; --ok: #1c7a52; --sys: #7b8493;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper:#11141a; --card:#171b23; --ink:#e4e8ee; --muted:#8b95a5; --rule:#262d38;
+      --time:#7c93ff; --color:#e8954a; --ok:#4fc08d; --sys:#6b7484; }
+  }
+  :root[data-theme="dark"] { --paper:#11141a; --card:#171b23; --ink:#e4e8ee; --muted:#8b95a5;
+    --rule:#262d38; --time:#7c93ff; --color:#e8954a; --ok:#4fc08d; --sys:#6b7484; }
+  :root[data-theme="light"] { --paper:#eef1f5; --card:#f7f9fb; --ink:#161a21; --muted:#646e7e;
+    --rule:#d5dce4; --time:#2c46b8; --color:#b4610f; --ok:#1c7a52; --sys:#7b8493; }
+
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans);
+    line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 48px 24px 96px;
+    display: flex; flex-direction: column; gap: 44px; }
+
+  .label { font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--muted); }
+
+  header { display: flex; flex-direction: column; gap: 14px; }
+  h1 { font-size: clamp(28px,4.5vw,42px); font-weight: 640; letter-spacing: -.025em;
+    text-wrap: balance; margin: 0; }
+  .lede { max-width: 64ch; color: var(--muted); font-size: 15px; margin: 0; }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  .verdict { border-left: 3px solid var(--ok); padding: 14px 18px; background: var(--card);
+    border-radius: 0 3px 3px 0; font-size: 15px; }
+  .verdict b { color: var(--ok); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(122px,1fr)); gap: 1px;
+    background: var(--rule); border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+  .stat { background: var(--card); padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; }
+  .stat b { font-family: var(--mono); font-size: 21px; font-weight: 600;
+    font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .stat.good b { color: var(--ok); }
+
+  section { display: flex; flex-direction: column; gap: 14px; }
+  h2 { font-size: 13px; font-weight: 600; margin: 0; }
+
+  /* Live app embeds */
+  .apps { display: grid; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); gap: 20px; }
+  .app { border: 1px solid var(--rule); border-radius: 3px; background: var(--card);
+    overflow: hidden; display: flex; flex-direction: column; }
+  .app-head { padding: 11px 14px; border-bottom: 1px solid var(--rule);
+    display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+  .app-who { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .app-title { font-size: 14px; }
+  .chip { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 2px; margin-left: auto; }
+  .chip.time { color: var(--time); background: color-mix(in srgb, var(--time) 13%, transparent); }
+  .chip.color { color: var(--color); background: color-mix(in srgb, var(--color) 13%, transparent); }
+  .frame { position: relative; height: 260px; background: #fff; }
+  .frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .app-foot { padding: 10px 14px; border-top: 1px solid var(--rule);
+    display: flex; flex-direction: column; gap: 5px; }
+  .pitch { font-size: 13px; color: var(--muted); }
+  .app-foot a { font-family: var(--mono); font-size: 11px; color: var(--muted);
+    text-decoration: none; border-bottom: 1px solid var(--rule); align-self: flex-start;
+    word-break: break-all; }
+  .app-foot a:hover { color: var(--ink); }
+  .app-foot a:focus-visible { outline: 2px solid var(--time); outline-offset: 2px; }
+
+  /* Findings */
+  .finds { display: flex; flex-direction: column; gap: 1px; background: var(--rule);
+    border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+  .find { background: var(--card); padding: 14px 18px; display: grid;
+    grid-template-columns: 84px 1fr; gap: 16px; align-items: start; }
+  .tag { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+    padding: 3px 0; }
+  .tag.pass { color: var(--ok); }
+  .tag.gap { color: var(--color); }
+  .find p { margin: 0; font-size: 14px; }
+  .find p + p { margin-top: 6px; color: var(--muted); font-size: 13px; }
+
+  /* Lanes */
+  .lanes { border: 1px solid var(--rule); border-radius: 3px; background: var(--card); overflow-x: auto; }
+  .lanes-inner { min-width: 640px; }
+  .axis { position: relative; height: 26px; border-bottom: 1px solid var(--rule); margin-left: 84px; }
+  .tick { position: absolute; top: 0; font-family: var(--mono); font-size: 10px;
+    color: var(--muted); transform: translateX(-50%); padding-top: 6px; }
+  .lane { display: flex; border-bottom: 1px solid var(--rule); }
+  .lane:last-child { border-bottom: 0; }
+  .lane-name { width: 84px; flex: none; padding: 9px 12px; font-family: var(--mono);
+    font-size: 12px; display: flex; align-items: center; gap: 7px; border-right: 1px solid var(--rule); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .t-time { background: var(--time); } .t-color { background: var(--color); }
+  .track { position: relative; flex: 1; min-height: 34px; }
+  .band { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--rule); }
+  .band.build { background: color-mix(in srgb, var(--muted) 7%, transparent); }
+  .band.submit { background: color-mix(in srgb, var(--ok) 9%, transparent); }
+  .ev { position: absolute; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px;
+    border-radius: 50%; background: var(--sys); }
+  .ev.k-theme { background: var(--ink); }
+  .ev.k-build { background: var(--muted); border-radius: 1px; }
+  .ev.k-submit { width: 12px; height: 12px; margin: -6px 0 0 -6px; background: var(--ok);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); }
+
+  .logwrap { border: 1px solid var(--rule); border-radius: 3px; background: var(--card); overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: 12px; min-width: 620px; }
+  th { text-align: left; padding: 9px 12px; font-size: 10px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--muted); font-weight: 500;
+    border-bottom: 1px solid var(--rule); position: sticky; top: 0; background: var(--card); }
+  td { padding: 5px 12px; border-bottom: 1px solid color-mix(in srgb, var(--rule) 55%, transparent);
+    vertical-align: top; }
+  .num { font-variant-numeric: tabular-nums; text-align: right; color: var(--muted); white-space: nowrap; }
+  .who { white-space: nowrap; } .who.system { color: var(--sys); }
+  tr.phase-row td { background: color-mix(in srgb, var(--muted) 8%, transparent); font-weight: 600; }
+  tr.submit-row td { background: color-mix(in srgb, var(--ok) 8%, transparent); }
+  .kind { color: var(--muted); white-space: nowrap; }
+
+  code { font-family: var(--mono); font-size: .92em;
+    background: color-mix(in srgb, var(--muted) 12%, transparent); padding: 1px 5px; border-radius: 2px; }
+  footer { border-top: 1px solid var(--rule); padding-top: 18px; color: var(--muted); font-size: 13px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="label">Validation run &middot; claude-haiku-4-5 &middot; arena=daytona</div>
+    <h1>Four real agents, four working apps</h1>
+    <p class="lede">
+      The first round with actual models in the loop. Every previous run used scripted agents that
+      wrote one hardcoded line of HTML, which proved the substrate but proved nothing about whether
+      a model could drive it. This one answers that.
+    </p>
+  </header>
+
+  <div class="verdict">
+    <b>The tool surface works.</b> All four agents picked a theme, wrote an 11&ndash;17KB single-page
+    app, backgrounded a server using the exact pattern from the tool description, verified it with
+    <code>curl</code>, and submitted a health-checked URL. No crashes, no malformed calls, no agent
+    wedged a foreground process. On a small, cheap model.
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <section>
+    <h2>What they built</h2>
+    <p class="lede">
+      Live embeds of the running sandboxes. Nothing here was written by a human: each is what the
+      agent produced in a single build phase, served from its own isolated Daytona sandbox.
+    </p>
+    <div class="apps" id="apps"></div>
+  </section>
+
+  <section>
+    <h2>Findings</h2>
+    <div class="finds" id="finds"></div>
+  </section>
+
+  <section>
+    <h2>Timeline</h2>
+    <p class="lede">
+      All four finished by <strong>t+81s</strong> against a build phase that ran to t+202s. They used
+      40% of the time they were given.
+    </p>
+    <div class="lanes">
+      <div class="lanes-inner">
+        <div class="axis" id="axis"></div>
+        <div id="lanes"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Full log</h2>
+    <div class="logwrap">
+      <table>
+        <thead><tr><th class="num">seq</th><th class="num">t+s</th><th>agent</th><th>kind</th><th>body</th></tr></thead>
+        <tbody id="log"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    Run <code>2026-07-24T19-38-11-086Z</code>. Sandboxes held open with <code>KEEP_ALIVE=1</code>, so
+    the embeds above are live until the round is reclaimed with
+    <code>pnpm --filter arena cleanup</code>. After that the frames go blank; the event log below is
+    unaffected.
+  </footer>
+</div>
+
+<script>
+  const EVENTS = [{"s":1,"t":0,"a":"system","k":"phase","b":"mingle"},{"s":2,"t":5.89,"a":"rex","k":"theme","b":"color","g":"color"},{"s":3,"t":9.42,"a":"rex","k":"thought","b":"Good! I've claimed the color theme. Now I'll build a striking single-page web app that helps people make color decisions."},{"s":4,"t":13.83,"a":"iris","k":"thought","b":"I'm going to pick the color theme and build a sophisticated color palette generator with harmony calculations and accessibility checking."},{"s":5,"t":13.84,"a":"iris","k":"theme","b":"color","g":"color"},{"s":6,"t":14.01,"a":"ada","k":"theme","b":"color","g":"color"},{"s":7,"t":15.82,"a":"juno","k":"thought","b":"I'll pick the time theme and build a sleep calculator - something genuinely useful that helps people figure out how much sleep they'll get."},{"s":8,"t":15.82,"a":"juno","k":"theme","b":"time","g":"time"},{"s":9,"t":18.57,"a":"iris","k":"thought","b":"Now I'll build a comprehensive color harmony tool: takes a base color, generates complementary, triadic, analogous and split-complementary harmonies."},{"s":10,"t":18.68,"a":"ada","k":"thought","b":"I've chosen the color theme. A tool that helps users compare color palettes and make decisions based on harmony and contrast."},{"s":11,"t":20.22,"a":"juno","k":"thought","b":"Now I'll build a sleep calculator app. Input when you're going to bed and how many sleep cycles you want."},{"s":12,"t":22.51,"a":"system","k":"phase","b":"build"},{"s":13,"t":43.9,"a":"rex","k":"build","b":"wrote app/index.html (11547b)"},{"s":14,"t":48.76,"a":"rex","k":"thought","b":"Now let me start the server on port 3000 and verify it works:"},{"s":15,"t":49.31,"a":"rex","k":"build","b":"cd ~/app && nohup python3 -m http.server 3000 >/tmp/serve.log 2>&1 & sleep 1; echo up"},{"s":16,"t":49.72,"a":"juno","k":"build","b":"wrote app/index.html (11063b)"},{"s":17,"t":52.09,"a":"juno","k":"thought","b":"Now let me start the server and verify it works:"},{"s":18,"t":52.67,"a":"juno","k":"build","b":"cd ~/app && nohup python3 -m http.server 3000 >/tmp/serve.log 2>&1 & sleep 1; echo up"},{"s":19,"t":52.75,"a":"rex","k":"build","b":"curl -s http://localhost:3000/ | head -20"},{"s":20,"t":55.06,"a":"rex","k":"thought","b":"Perfect! The server is running. Now let me submit:"},{"s":21,"t":55.66,"a":"juno","k":"thought","b":"Perfect. Let me verify it's responding:"},{"s":22,"t":55.9,"a":"juno","k":"build","b":"curl -s http://localhost:3000/ | head -20"},{"s":23,"t":56.48,"a":"rex","k":"submit","b":"Pick a mood and instantly discover harmonious color palettes curated by emotional intent.","g":"color","u":"https://3000-t2bzxi4afs9lxn8s.daytonaproxy01.net"},{"s":24,"t":57.58,"a":"juno","k":"thought","b":"Excellent! The server is running. Now let me submit:"},{"s":25,"t":58.77,"a":"juno","k":"submit","b":"Calculate optimal sleep schedules in 90-minute cycles so you wake up refreshed, not groggy.","g":"time","u":"https://3000-m2cfwd5obzyqkz6q.daytonaproxy01.net"},{"s":26,"t":60.7,"a":"rex","k":"thought","b":"I've successfully built and submitted Color Mood Explorer for the color theme."},{"s":27,"t":62.99,"a":"juno","k":"thought","b":"Done! Sleep Calculator: calculates when you should fall asleep based on 90-minute sleep cycles."},{"s":28,"t":63.47,"a":"iris","k":"build","b":"wrote app/index.html (15894b)"},{"s":29,"t":64.53,"a":"ada","k":"build","b":"wrote app/index.html (16598b)"},{"s":30,"t":67.01,"a":"iris","k":"thought","b":"Now let me start the web server on port 3000:"},{"s":31,"t":67.57,"a":"iris","k":"build","b":"cd ~/app && nohup python3 -m http.server 3000 >/tmp/serve.log 2>&1 & sleep 1; echo up"},{"s":32,"t":67.95,"a":"ada","k":"thought","b":"Now I'll start the server and verify it works:"},{"s":33,"t":68.34,"a":"ada","k":"build","b":"cd ~/app && nohup python3 -m http.server 3000 >/tmp/serve.log 2>&1 & sleep 1; echo up"},{"s":34,"t":70.65,"a":"iris","k":"thought","b":"Perfect! Now let me verify the server is responding:"},{"s":35,"t":70.86,"a":"iris","k":"build","b":"curl -s http://localhost:3000/index.html | head -20"},{"s":36,"t":71.52,"a":"ada","k":"thought","b":"Great! The server is running. Now let me verify it responds correctly:"},{"s":37,"t":71.73,"a":"ada","k":"build","b":"curl -s http://localhost:3000/ | head -20"},{"s":38,"t":73.43,"a":"iris","k":"thought","b":"Excellent! The server is running and serving the app. Now I'll submit:"},{"s":39,"t":74.82,"a":"iris","k":"submit","b":"Generates complementary, triadic, analogous and split-complementary harmonies with real-time WCAG contrast calculations.","g":"color","u":"https://3000-onvdilqggevjsqeh.daytonaproxy01.net"},{"s":40,"t":74.97,"a":"ada","k":"thought","b":"Perfect! The server is working. Now I'll submit the project:"},{"s":41,"t":76.24,"a":"ada","k":"submit","b":"Generates harmonious palettes using color theory and analyzes contrast ratios for WCAG compliance.","g":"color","u":"https://3000-dgqbzfo86gcbn79x.daytonaproxy01.net"},{"s":42,"t":79.07,"a":"iris","k":"thought","b":"Built and submitted Color Harmony Generator: five harmony types plus live accessibility scoring."},{"s":43,"t":81.28,"a":"ada","k":"thought","b":"Successfully built and submitted the Color Palette Decision Helper."},{"s":44,"t":202.69,"a":"system","k":"phase","b":"submit"},{"s":45,"t":232.69,"a":"system","k":"phase","b":"judged"},{"s":46,"t":232.69,"a":"system","k":"score","b":"round complete, 4/4 submitted"}];
+
+  const TITLES = { rex: "Color Mood Explorer", juno: "Sleep Calculator",
+    iris: "Color Harmony Generator", ada: "Color Palette Decision Helper" };
+  const SIZES = { rex: "11.5 KB", juno: "11.1 KB", iris: "15.9 KB", ada: "16.6 KB" };
+  const COST = { rex: 0.588, juno: 0.4399, iris: 0.4588, ada: 0.4608 };
+
+  const TOTAL = EVENTS[EVENTS.length - 1].t;
+  const AGENTS = ["rex", "juno", "iris", "ada"];
+  const el = (t, c, x) => { const n = document.createElement(t); if (c) n.className = c;
+    if (x != null) n.textContent = x; return n; };
+  const pct = (t) => (t / TOTAL) * 100;
+
+  const trackOf = {}; for (const e of EVENTS) if (e.k === "theme") trackOf[e.a] = e.g;
+  const subs = EVENTS.filter((e) => e.k === "submit");
+  const phases = EVENTS.filter((e) => e.k === "phase");
+  const totalCost = Object.values(COST).reduce((a, b) => a + b, 0);
+
+  /* Stats */
+  const stats = [["agents", 4], ["submitted", "4/4", true], ["failures", "0", true],
+    ["turns each", 6], ["total cost", "$" + totalCost.toFixed(2)], ["all done by", "t+81s"]];
+  const se = document.getElementById("stats");
+  for (const [k, v, good] of stats) {
+    const d = el("div", "stat" + (good ? " good" : ""));
+    d.append(el("b", null, String(v)), el("span", "label", k)); se.append(d);
+  }
+
+  /* Live app embeds */
+  const apps = document.getElementById("apps");
+  for (const s of subs) {
+    const card = el("div", "app");
+    const head = el("div", "app-head");
+    head.append(el("span", "app-who", s.a), el("span", "app-title", TITLES[s.a]),
+      el("span", "chip " + s.g, s.g));
+    const frame = el("div", "frame");
+    const f = document.createElement("iframe");
+    f.src = s.u; f.loading = "lazy"; f.setAttribute("sandbox", "allow-scripts");
+    f.title = TITLES[s.a] + " by " + s.a;
+    frame.append(f);
+    const foot = el("div", "app-foot");
+    foot.append(el("div", "pitch", s.b));
+    const a = el("a", null, SIZES[s.a] + "  ·  " + s.u.replace("https://", ""));
+    a.href = s.u; a.target = "_blank"; a.rel = "noopener";
+    foot.append(a);
+    card.append(head, frame, foot); apps.append(card);
+  }
+
+  /* Findings */
+  const FINDS = [
+    ["pass", "Tool descriptions land", "Every agent used the exact <code>nohup ... &amp; sleep 1</code> pattern spelled out in the sandbox_bash description, and none wedged a foreground server. The tool description is doing real work; keep that line."],
+    ["pass", "Agents self-verify", "All four ran <code>curl</code> against localhost before calling submit, unprompted by anything except one line of the system prompt. The health check never had to reject a submission."],
+    ["gap", "Messaging is unused", "Zero send_message calls across four agents. On this evidence, agent-to-agent chat is decoration. Either prompt for it explicitly or cut it and reclaim the complexity."],
+    ["gap", "Track choice is lopsided", "Three of four chose color; the color track hit its cap of three exactly. Nobody was refused, so the capacity rule is still untested. With six agents this becomes a real contention path worth exercising before the demo."],
+    ["gap", "The build phase is oversized", "Everyone finished in 40% of the allotted time. Haiku is fast and the apps are small, but a shorter build phase would tighten the demo, and Opus will use more of it."],
+  ];
+  const fe = document.getElementById("finds");
+  for (const [kind, title, body] of FINDS) {
+    const row = el("div", "find");
+    row.append(el("div", "tag " + kind, kind === "pass" ? "works" : "gap"));
+    const col = el("div");
+    col.append(el("p", null, title));
+    const p = el("p"); p.innerHTML = body; col.append(p);
+    row.append(col); fe.append(row);
+  }
+
+  /* Lanes */
+  const axis = document.getElementById("axis");
+  for (let s = 0; s <= TOTAL; s += 30) {
+    const t = el("div", "tick", s + "s"); t.style.left = pct(s) + "%"; axis.append(t);
+  }
+  const lanes = document.getElementById("lanes");
+  for (const a of AGENTS) {
+    const lane = el("div", "lane");
+    const name = el("div", "lane-name");
+    name.append(el("span", "dot t-" + trackOf[a]), el("span", null, a));
+    const track = el("div", "track");
+    phases.forEach((p, i) => {
+      const next = phases[i + 1];
+      const b = el("div", "band " + p.b);
+      b.style.left = pct(p.t) + "%";
+      b.style.width = pct((next ? next.t : TOTAL) - p.t) + "%";
+      track.append(b);
+    });
+    for (const e of EVENTS.filter((x) => x.a === a)) {
+      const d = el("div", "ev k-" + e.k);
+      d.style.left = pct(e.t) + "%";
+      d.title = "t+" + e.t + "s  " + e.k + ": " + e.b;
+      track.append(d);
+    }
+    lane.append(name, track); lanes.append(lane);
+  }
+
+  /* Log */
+  const log = document.getElementById("log");
+  for (const e of EVENTS) {
+    const tr = el("tr", e.k === "phase" ? "phase-row" : e.k === "submit" ? "submit-row" : "");
+    tr.append(el("td", "num", e.s), el("td", "num", e.t.toFixed(2)));
+    const who = el("td", "who" + (e.a === "system" ? " system" : ""), e.a);
+    if (trackOf[e.a]) who.style.color = "var(--" + trackOf[e.a] + ")";
+    tr.append(who, el("td", "kind", e.k));
+    tr.append(el("td", null, e.k === "phase" ? "phase: " + e.b : e.b));
+    log.append(tr);
+  }
+</script>

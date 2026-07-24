@@ -1,5 +1,24 @@
 # Fixtures
 
+## `judged-run.jsonl`
+
+**The best run we have, and the one to demo from.** The complete loop against live
+Daytona with real models in the loop: three agents picked a lane, built in their
+own sandboxes, shipped live URLs, presented their own case from their trace,
+were scored by three jurors, and a winner was crowned one point clear.
+
+53 events, 355s, `claude-haiku-4-5`, logged to Braintrust. Contains every event
+kind the office has to render, including `present`, `verdict` and `crown`, which
+`demo-run.jsonl` predates.
+
+Rendered view: [`docs/judged-run.html`](../docs/judged-run.html).
+
+One caveat worth knowing when reading it back: `juror-craft` returned prose
+instead of JSON while scoring juno and was defaulted to 0/30. That bug is fixed
+(jurors now retry, then abstain), but this log is the record of the run that
+found it, so the zero is still in there.
+
+
 ## `demo-run.jsonl`
 
 One complete arena round against **live Daytona sandboxes**: six agents, two
