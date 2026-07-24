@@ -101,11 +101,18 @@ export const CAST = Object.fromEntries(
 
 export const ROSTER = AGENT_IDS
 
-/** Jurors are characters too, but they never compete. */
-export const JURY: Record<string, { lens: string }> = {
-  'juror-product': { lens: 'Would anyone use it?' },
-  'juror-craft': { lens: 'Is it made well?' },
-  'juror-engineer': { lens: 'Does it hold up?' },
+/**
+ * Jurors are characters too, but they never compete. They are sharks, and they
+ * spend the round in the tank on the right of the lounge — which is why they
+ * only surface once there is something to judge.
+ */
+export const JURY: Record<string, { lens: string; name: string; avatar: string }> = {
+  'juror-product': { lens: 'Would anyone use it?', name: 'Product', avatar: '/avatars/sharks/shark-green.png' },
+  'juror-craft': { lens: 'Is it made well?', name: 'Craft', avatar: '/avatars/sharks/shark-beanie.png' },
+  'juror-engineer': { lens: 'Does it hold up?', name: 'Engineering', avatar: '/avatars/sharks/shark-grumpy.png' },
 }
+
+/** Panel order, shared by the tank and the verdict column. */
+export const JUROR_ORDER = ['juror-product', 'juror-craft', 'juror-engineer']
 
 export const isCast = (id: string): id is AgentId => id in CAST

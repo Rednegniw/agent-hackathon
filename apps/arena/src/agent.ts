@@ -60,6 +60,15 @@ export interface AgentDeps {
   isOpen?: () => boolean
 
   /**
+   * Cancels the SDK session when the operator stops the round.
+   *
+   * isOpen alone is not enough: it is only consulted between turns, so an
+   * agent halfway through a two-minute sandbox build would keep going — and
+   * keep billing — until that turn finished. This aborts the turn itself.
+   */
+  abort?: AbortController
+
+  /**
    * Where rendered pitch media is filed. Without it the studio tools are off,
    * which is what a replay-only or media-less round wants.
    */
@@ -547,7 +556,7 @@ export async function runAgent(
   maxTurns: number,
   deps: AgentDeps = {},
 ): Promise<void> {
-  const { inbox, isOpen = () => false } = deps
+  const { inbox, isOpen = () => false, abort } = deps
   const opening = `The round has started. You are ${id}. Build something, submit it, then film it before time runs out.`
 
   const res = query({
@@ -562,6 +571,7 @@ export async function runAgent(
       tools: [],
       permissionMode: 'bypassPermissions',
       maxTurns,
+      abortController: abort,
     },
   })
 

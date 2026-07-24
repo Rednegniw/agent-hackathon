@@ -29,7 +29,13 @@ export type ArenaKind = (typeof ARENA_KINDS)[number]
 export const AGENT_KINDS = ['scripted', 'real'] as const
 export type AgentKind = (typeof AGENT_KINDS)[number]
 
-export type RoundState = 'idle' | 'running' | 'done' | 'failed'
+/**
+ * 'stopping' is the operator's abort in progress. It is a state of its own
+ * rather than an instant flip back to 'idle' because teardown has to finish
+ * first: letting the next round start while six sandboxes are still being
+ * deleted leaks them, and leaked sandboxes cost real money.
+ */
+export type RoundState = 'idle' | 'running' | 'stopping' | 'done' | 'failed'
 
 const PORT = 3000
 
@@ -249,6 +255,13 @@ export interface RoundStatus {
   /** Countdown data: when the current phase began and how long it runs. */
   phaseStartedAt: number | null
   phaseDurationMs: number | null
+
+  /**
+   * Events at or below this seq belong to earlier rounds. Server-side truth,
+   * so a reloaded office hides the same backlog a long-lived one does — the
+   * log is append-only and replayed in full on every connect.
+   */
+  epochSeq: number
 }
 
 /**
@@ -270,6 +283,22 @@ export class RoundRunner {
   #startedAt: number | null = null
   #finishedAt: number | null = null
   #error: string | null = null
+  #epochSeq = 0
+
+  /** Cancels the round's agents. Replaced per round, cleared when idle. */
+  #abort?: AbortController
+
+  /** Held so reset() can unpark readers that #run owns. */
+  #inbox?: Inbox
+
+  /**
+   * The in-flight #run. reset() waits on it so 'stopping' lasts exactly as
+   * long as the round's own teardown does, rather than a guessed timeout.
+   */
+  #running?: Promise<void>
+
+  /** Set by reset(), read by #run to skip the end-of-round work. */
+  #aborted = false
 
   constructor(log: EventLog) {
     this.#log = log
@@ -291,7 +320,77 @@ export class RoundRunner {
       error: this.#error,
       phaseStartedAt: this.#clock?.phaseStartedAt ?? null,
       phaseDurationMs: this.#clock?.phaseDurationMs ?? null,
+      epochSeq: this.#epochSeq,
     }
+  }
+
+  /**
+   * Ends whatever is happening and returns the arena to idle, which is what
+   * puts the office back in the lobby: `phase` is read off the clock, so
+   * clearing the clock is the only thing that can report 'idle' again.
+   *
+   * Returns immediately. A finished round is idle by the time this returns; a
+   * live one reports 'stopping' and lands on idle once its teardown completes,
+   * which the office sees on its next /state poll.
+   */
+  reset(): { ok: true; stopping: boolean } {
+    // Already shutting down. Saying so beats starting a second teardown.
+    if (this.#state === 'stopping') return { ok: true, stopping: true }
+
+    if (this.#state !== 'running') {
+      this.#toIdle()
+      return { ok: true, stopping: false }
+    }
+
+    this.#state = 'stopping'
+    this.#aborted = true
+
+    this.#log.emit({ agentId: 'system', kind: 'score', body: 'round stopped by the operator' })
+
+    /**
+     * Three levers, because a round waits in three different places: the
+     * clock's phase sleep, the agents' SDK turns, and any reader parked on the
+     * inbox. Pulling only one leaves the round hanging on the other two.
+     */
+    this.#clock?.abort()
+    this.#abort?.abort()
+    this.#inbox?.releaseAll()
+
+    // The round is stopped from the operator's point of view now. Teardown can
+    // continue in the background, but /state should return the lobby at once.
+    this.#clock = undefined
+
+    /**
+     * #run's own finally does the teardown, so the wait here is what makes
+     * 'stopping' honest. It cannot reject — #run catches everything — but
+     * catch anyway: an unhandled rejection here would take the server down
+     * and the whole point of this is to survive a stop.
+     */
+    void (this.#running ?? Promise.resolve()).catch(() => {}).then(() => this.#toIdle())
+
+    return { ok: true, stopping: true }
+  }
+
+  /**
+   * Back to a cold start. The clock and arena are dropped rather than kept for
+   * inspection: status() reads phase off the clock, so a retained one would go
+   * on reporting 'judged' and the lobby could never come back.
+   */
+  #toIdle() {
+    this.#state = 'idle'
+    this.#clock = undefined
+    this.#arena = undefined
+    this.#abort = undefined
+    this.#inbox = undefined
+    this.#running = undefined
+    this.#aborted = false
+    this.#roundId = null
+    this.#startedAt = null
+    this.#finishedAt = null
+    this.#error = null
+
+    // Everything logged so far belongs to a round the office should forget.
+    this.#epochSeq = this.#log.head()
   }
 
   /**
@@ -304,7 +403,23 @@ export class RoundRunner {
       return { ok: false, reason: `a round is already running (${this.#roundId})` }
     }
 
+    /**
+     * The previous round's sandboxes are still being deleted. Starting now
+     * would provision a second set against the same roster while the first
+     * set is mid-delete, so this is a "try again in a moment", not an error.
+     */
+    if (this.#state === 'stopping') {
+      return { ok: false, reason: 'the previous round is still shutting down — try again in a moment' }
+    }
+
     const roundId = new Date().toISOString().replace(/[:.]/g, '-')
+
+    /**
+     * Draw the line under the previous round before emitting anything. A
+     * reloaded office replays the whole log, so without this the new round
+     * renders on top of the old one's crown and submissions.
+     */
+    this.#epochSeq = this.#log.head()
 
     /**
      * Set the brief before anything reads it. agent.ts and judge.ts pick it up
@@ -322,6 +437,8 @@ export class RoundRunner {
     this.#startedAt = Date.now()
     this.#finishedAt = null
     this.#error = null
+    this.#aborted = false
+    this.#abort = new AbortController()
 
     this.#log.emit({ agentId: 'system', kind: 'phase', body: `brief: ${brief}` })
 
@@ -331,7 +448,7 @@ export class RoundRunner {
      * block (a missing DAYTONA_API_KEY, for one) would otherwise surface as an
      * unhandled rejection and take the whole server down with it.
      */
-    void this.#run(roundId, opts).catch((err: unknown) => {
+    this.#running = this.#run(roundId, opts).catch((err: unknown) => {
       this.#error = err instanceof Error ? err.message : String(err)
       this.#state = 'failed'
       this.#finishedAt = Date.now()
@@ -367,6 +484,9 @@ export class RoundRunner {
      */
     const inbox = new Inbox()
     const teams = opts.agents === 'real' && TEAMS_ENABLED ? new TeamRoster() : undefined
+
+    // reset() unparks readers through this, so it has to outlive #run's scope.
+    this.#inbox = inbox
 
     clock.onPhase(async (phase) => {
       this.#log.emit({ agentId: 'system', kind: 'phase', body: phase })
@@ -419,7 +539,7 @@ export class RoundRunner {
             roster.filter((o) => o !== id),
             opts.model,
             Number(process.env.MAX_TURNS ?? 30),
-            { roundId, teams, inbox, isOpen: roundIsOpen },
+            { roundId, teams, inbox, isOpen: roundIsOpen, abort: this.#abort },
           )
         : this.#agentScript(arena, clock, id, opts.arena, roundId)
 
@@ -428,12 +548,27 @@ export class RoundRunner {
         clock.run(),
         ...roster.map((id) =>
           drive(id).catch((err: unknown) => {
+            /**
+             * A stopped round kills every session at once, so without this the
+             * office fills with six "failed" thoughts that describe nothing
+             * but the operator pressing the button.
+             */
+            if (this.#aborted) return
+
             const msg = err instanceof Error ? err.message : String(err)
             console.error(`[round ${roundId}] ${id}:`, msg)
             this.#log.emit({ agentId: id, kind: 'thought', body: `failed: ${msg}` })
           }),
         ),
       ])
+
+      /**
+       * Everything below is end-of-round work — filming the stragglers, then
+       * judging. An aborted round has no result to present, and both halves
+       * are slow and cost money, so it stops here and goes straight to the
+       * finally's teardown.
+       */
+      if (this.#aborted) return
 
       /**
        * After every agent has stopped, and before teardown deletes the
@@ -467,9 +602,16 @@ export class RoundRunner {
       this.#log.emit({ agentId: 'system', kind: 'score', body: 'round complete' })
       this.#state = 'done'
     } catch (err) {
-      this.#error = err instanceof Error ? err.message : String(err)
-      this.#log.emit({ agentId: 'system', kind: 'score', body: `round failed: ${this.#error}` })
-      this.#state = 'failed'
+      /**
+       * A stop tears the round down from under itself, so whatever surfaces
+       * here is the abort, not a fault. Reporting it as 'failed' would leave
+       * an error pill on the lobby the operator is about to be handed.
+       */
+      if (!this.#aborted) {
+        this.#error = err instanceof Error ? err.message : String(err)
+        this.#log.emit({ agentId: 'system', kind: 'score', body: `round failed: ${this.#error}` })
+        this.#state = 'failed'
+      }
     } finally {
       this.#finishedAt = Date.now()
 
@@ -478,11 +620,16 @@ export class RoundRunner {
        * and only finish() moves it on, so a round that threw anywhere above
        * would otherwise leave the office reporting judging forever with no
        * round running to end it.
+       *
+       * Skipped on an abort, where the clock is already parked terminal and
+       * finish() would only fire the phase hooks a stop exists to avoid.
        */
-      try {
-        await clock.finish()
-      } catch (err) {
-        console.error(`[round ${roundId}] could not close the clock:`, (err as Error).message)
+      if (!this.#aborted) {
+        try {
+          await clock.finish()
+        } catch (err) {
+          console.error(`[round ${roundId}] could not close the clock:`, (err as Error).message)
+        }
       }
 
       /**

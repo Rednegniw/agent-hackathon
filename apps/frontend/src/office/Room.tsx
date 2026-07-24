@@ -3,6 +3,7 @@ import type { AgentId } from '../arena'
 import { ROSTER } from '../roster'
 import type { Fold } from '../useArena'
 import Penguin from './Penguin'
+import Jury from './Jury'
 
 /**
  * The room, and the loop that keeps it alive.
@@ -204,6 +205,12 @@ export default function Room({
   return (
     <div className="room">
       <img className="room-art" src={SCENES[scene].art} alt="" />
+
+      {/*
+        The jury lives with the stage art, not with the phase: the tank is only
+        in this room, and the sharks are in it from the moment it opens.
+      */}
+      {scene === 'stage' && <Jury derived={derived} />}
 
       <div className="room-stage" ref={stageRef} data-stage="1">
         {ROSTER.map((id) => (

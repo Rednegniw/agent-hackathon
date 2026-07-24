@@ -21,9 +21,14 @@ const MAX_BUBBLES = 3
 const BLIP_MS = 1400
 
 export default function App() {
-  const { events, derived, status, connected, error, running, starting, start } = useArena()
+  const { events, derived, status, connected, error, running, stopping, starting, start, reset } =
+    useArena()
 
-  /** Kept here so Restart can re-run whatever the operator last chose. */
+  /**
+   * Lives here, not in the lobby, so the operator's choices survive the round
+   * and the lobby they are handed back at the end is still set up the way they
+   * left it.
+   */
   const [config, setConfig] = useState<RoundConfig>({
     arena: 'daytona',
     /** Matches DEFAULT_START: a live round costs money, so it is opted into. */
@@ -114,7 +119,16 @@ export default function App() {
 
   const hud = <Hud status={status} connected={connected} derived={derived} />
 
-  const restart = () => {
+  /**
+   * Ends the round and goes back to the lobby, rather than immediately re-running
+   * the last config. Both things the operator wants from this button — stopping a
+   * round that is going badly, and setting up a fresh one after the leaderboard —
+   * end at the same place: the lobby, with the settings in reach.
+   *
+   * The office-side clearing happens here; the arena's own reset is what makes
+   * the lobby reappear, by returning the phase to idle.
+   */
+  const endRound = () => {
     setShowResults(false)
     setOpenAgent(null)
     setExpanded(null)
@@ -122,7 +136,8 @@ export default function App() {
     seenThought.current.clear()
     seenMessage.current.clear()
     setBubbles({})
-    void start(config)
+    setBlips({})
+    void reset()
   }
 
   const tray = (
@@ -132,9 +147,16 @@ export default function App() {
           See the results
         </button>
       )}
+
+      {/**
+       * Never disabled while a round runs — that was the bug. A stop button that
+       * turns itself off the moment there is something to stop is only useful
+       * when it is not needed. It is disabled during 'stopping' alone, where the
+       * arena is mid-teardown and a second press has nothing left to do.
+       */}
       {phase !== 'idle' && (
-        <button className="btn btn-primary" onClick={restart} disabled={running || starting}>
-          {running ? 'Running…' : starting ? 'Starting…' : 'Restart round'}
+        <button className="btn btn-primary" onClick={endRound} disabled={stopping}>
+          {stopping ? 'Stopping…' : running || starting ? 'Stop the round' : 'New round'}
         </button>
       )}
     </>
@@ -156,6 +178,7 @@ export default function App() {
         <OperatorPanel
           running={running}
           starting={starting}
+          stopping={stopping}
           error={error ?? status?.error ?? null}
           config={config}
           onConfig={setConfig}

@@ -51,6 +51,7 @@ const SURPRISES = [
 export interface OperatorPanelProps {
   running: boolean
   starting: boolean
+  stopping: boolean
   error: string | null
   config: RoundConfig
   onConfig: (next: RoundConfig) => void
@@ -60,6 +61,7 @@ export interface OperatorPanelProps {
 export default function OperatorPanel({
   running,
   starting,
+  stopping,
   error,
   config,
   onConfig,
@@ -73,7 +75,7 @@ export default function OperatorPanel({
   const set = <K extends keyof RoundConfig>(key: K, value: RoundConfig[K]) =>
     onConfig({ ...config, [key]: value })
 
-  const busy = running || starting
+  const busy = running || starting || stopping
 
   /**
    * Seats do not always divide evenly, so say the honest thing: settle() tops
@@ -306,7 +308,7 @@ export default function OperatorPanel({
             </button>
             <span className="brief-spacer" />
             <button className="btn btn-primary btn-pill" onClick={() => onStart(config)} disabled={busy}>
-              {running ? 'Running…' : starting ? 'Starting…' : 'Start the battle'}
+              {stopping ? 'Finishing cleanup…' : running ? 'Running…' : starting ? 'Starting…' : 'Start the battle'}
             </button>
           </div>
         </div>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ARENA_URL,
   fetchStatus,
+  resetRound,
   startRound,
   type AgentEvent,
   type AgentId,
@@ -212,8 +213,12 @@ export interface Arena {
   connected: boolean
   error: string | null
   running: boolean
+  /** The arena is tearing a stopped round down. Briefly true after reset(). */
+  stopping: boolean
   starting: boolean
   start: (config: RoundConfig) => Promise<void>
+  /** Ends the round, whatever it is doing, and returns the arena to the lobby. */
+  reset: () => Promise<void>
 }
 
 export function useArena(): Arena {
@@ -227,8 +232,15 @@ export function useArena(): Arena {
    * Events at or below this seq belong to a previous round. The log is
    * append-only and the server replays it on connect, so the office hides the
    * backlog rather than asking the arena to forget it.
+   *
+   * The arena reports the same line as `epochSeq`, and that is the one that
+   * matters: local state alone resets to 0 on reload, which used to repopulate
+   * the office with the previous round — crown and all — instead of the lobby.
+   * Kept as a local floor too, so a new round's events are hidden the instant
+   * Start is pressed rather than one poll later.
    */
   const [hideBefore, setHideBefore] = useState(0)
+  const epoch = Math.max(hideBefore, status?.epochSeq ?? 0)
 
   useEffect(() => {
     const source = new EventSource(`${ARENA_URL}/events`)
@@ -288,7 +300,28 @@ export function useArena(): Arena {
     [events, refresh],
   )
 
-  const visible = useMemo(() => events.filter((e) => e.seq > hideBefore), [events, hideBefore])
+  /**
+   * Ends the round and hands the lobby back.
+   *
+   * The office does not decide it is idle — it asks the arena to become idle
+   * and re-renders when /state says so. Faking it locally would show the lobby
+   * over a round whose agents were still building and billing.
+   */
+  const reset = useCallback(async () => {
+    setError(null)
+
+    try {
+      // Hide this round now: the arena agrees on its next poll, but the office
+      // should clear the moment the operator asks it to.
+      setHideBefore(events.reduce((n, e) => Math.max(n, e.seq), 0))
+      await resetRound()
+      await refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }, [events, refresh])
+
+  const visible = useMemo(() => events.filter((e) => e.seq > epoch), [events, epoch])
   const derived = useMemo(() => fold(visible), [visible])
 
   return {
@@ -298,7 +331,9 @@ export function useArena(): Arena {
     connected,
     error,
     running: status?.state === 'running',
+    stopping: status?.state === 'stopping',
     starting,
     start,
+    reset,
   }
 }

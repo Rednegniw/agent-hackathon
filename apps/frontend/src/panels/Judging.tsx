@@ -1,4 +1,4 @@
-import { JURY } from '../roster'
+import { JURY, JUROR_ORDER } from '../roster'
 import type { Fold } from '../useArena'
 
 /**
@@ -6,8 +6,6 @@ import type { Fold } from '../useArena'
  * itself). Three juror cards dock beside the panel and fill in as each
  * verdict lands; the ranks and the crown follow.
  */
-
-const JUROR_ORDER = ['juror-product', 'juror-craft', 'juror-engineer']
 
 export function VerdictColumn({ derived }: { derived: Fold }) {
   const subject = derived.presenting

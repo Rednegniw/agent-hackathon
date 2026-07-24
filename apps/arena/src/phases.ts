@@ -83,6 +83,13 @@ export class PhaseClock {
   #phaseStartedAt: number | null = null
   #phaseMs: number | null = null
 
+  /**
+   * Cuts the current phase's sleep short on abort. Without it, stopping a
+   * round mid-'build' still waits out the remaining twelve minutes before
+   * run() notices it was asked to stop.
+   */
+  #abort = new AbortController()
+
   constructor(sequence: Step[] = SEQUENCE) {
     this.#sequence = sequence
   }
@@ -136,14 +143,18 @@ export class PhaseClock {
       await this.#enter(step.phase)
       this.#phaseStartedAt = Date.now()
       this.#phaseMs = step.ms
-      await sleep(step.ms)
+      await sleep(step.ms, this.#abort.signal)
     }
 
     /**
      * Judging is a phase the office can render, not dead time after the round.
      * run() stops here; the caller drives the evaluator round and then calls
      * finish(), so /state reports 'judging' for the minutes it actually takes.
+     *
+     * An aborted round returns instead: announcing 'judging' for a round that
+     * will never be judged is exactly the stuck state finish() exists to avoid.
      */
+    if (this.#stopped) return
     await this.#enter('judging')
   }
 
@@ -154,12 +165,51 @@ export class PhaseClock {
     this.#phaseMs = null
   }
 
-  stop() {
+  /** True once abort() has been called, so callers can skip end-of-round work. */
+  get aborted(): boolean {
+    return this.#stopped
+  }
+
+  /**
+   * Ends the round now, at the operator's request.
+   *
+   * The phase is parked on the terminal value directly, deliberately skipping
+   * #enter and therefore the hooks: hooks provision sandboxes and emit phase
+   * events, and an abort wants neither. Parking it terminal is what actually
+   * unwinds the round — every waiter in the system is a loop over phase()
+   * (`roundIsOpen`, waitForSubmit, the scripted agents' polls), so one
+   * assignment satisfies all of their existing exit conditions at once.
+   */
+  abort() {
     this.#stopped = true
+    this.#phase = 'judged'
+    this.#phaseStartedAt = null
+    this.#phaseMs = null
+    this.#abort.abort()
   }
 }
 
-export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+/**
+ * Sleeps, and wakes early if `signal` aborts.
+ *
+ * Resolves on abort rather than rejecting. Every caller here is a poll loop
+ * that re-checks a condition after waiting, so resolving early lets each one
+ * reach its own exit test; rejecting would convert all of them into error
+ * paths and bury a deliberate stop in "failed" events.
+ */
+export const sleep = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve) => {
+    if (signal?.aborted) return resolve()
+
+    const done = () => {
+      clearTimeout(timer)
+      signal?.removeEventListener('abort', done)
+      resolve()
+    }
+
+    const timer = setTimeout(done, ms)
+    signal?.addEventListener('abort', done, { once: true })
+  })
 
 /** What each phase permits. The tool layer enforces this, the arena reports it. */
 export const ALLOWED: Record<Phase, string[]> = {

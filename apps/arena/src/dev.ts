@@ -47,6 +47,11 @@ startServer({
     if (ack.ok) console.log(`[start] round ${ack.roundId} ${describe(opts)}`)
     return ack
   },
+  reset: () => {
+    const ack = runner.reset()
+    console.log(ack.stopping ? '[reset] stopping the round…' : '[reset] back to idle')
+    return ack
+  },
 })
 
 console.log(`[dev] run ${runId} -> ${log.file}`)

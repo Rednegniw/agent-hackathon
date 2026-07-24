@@ -116,6 +116,31 @@ h1, h2, h3, h4, h5, h6 { letter-spacing: -0.01em; }
   font-size: 15px; animation: fire 1400ms var(--ease) both; pointer-events: none;
 }
 
+/* ---- the jury, in the aquarium (stage scene only) ----
+   Three nested elements so three transforms can run at once without fighting
+   over the property: .shark surfaces, .shark-swim drifts, .shark-plate floats. */
+.tank { position: absolute; inset: 0; pointer-events: none; }
+.shark {
+  position: absolute; left: var(--lane-x); top: var(--lane-y); width: 60px;
+  /* The tank ignores the pointer; the sharks take it back so the lens tooltip works. */
+  pointer-events: auto; cursor: help;
+  animation: sharkIn 780ms var(--ease) var(--enter) both;
+}
+.shark-swim { animation: swim var(--swim) ease-in-out infinite alternate; }
+.shark-plate { position: relative; width: 60px; height: 60px; animation: float 5.4s ease-in-out infinite; }
+.shark-plate .plate-art {
+  border-radius: 999px;
+  outline-color: color-mix(in srgb, var(--color-neutral-100) 80%, transparent);
+  box-shadow: 0 0 0 5px color-mix(in srgb, #1d5f86 45%, transparent), var(--shadow-md);
+}
+/* The pill is the juror's own, so it stays legible against the water. */
+.shark .status-pill { background: color-mix(in srgb, var(--color-neutral-100) 92%, transparent); }
+.shark .status-pill .score { font-family: var(--font-heading); font-size: 12px; }
+
+@keyframes sharkIn { from { opacity: 0; transform: translateX(26px) scale(0.82); filter: blur(5px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes swim { from { transform: translateX(0); } to { transform: translateX(var(--drift)); } }
+@keyframes float { 0%, 100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-7px) rotate(1.5deg); } }
+
 /* ---- HUD ---- */
 .hud { position: absolute; top: 18px; left: 18px; z-index: 1100; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .hud-pill {
@@ -430,5 +455,6 @@ h1, h2, h3, h4, h5, h6 { letter-spacing: -0.01em; }
 :focus-visible { outline: 2px solid var(--color-accent-500); outline-offset: 2px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .penguin-plate, .status-pill.live, .burst, .preview-loading, .verdict-card.waiting { animation: none; }
+  .penguin-plate, .status-pill.live, .burst, .preview-loading, .verdict-card.waiting,
+  .shark-swim, .shark-plate { animation: none; }
 }

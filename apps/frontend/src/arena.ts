@@ -9,7 +9,7 @@ export * from '../../arena/src/events'
 import type { Phase } from '../../arena/src/events'
 
 /** Mirrors round.ts — kept local so the office doesn't import the arena's dep graph. */
-export type RoundState = 'idle' | 'running' | 'done' | 'failed'
+export type RoundState = 'idle' | 'running' | 'stopping' | 'done' | 'failed'
 
 export interface ArenaStatus {
   state: RoundState
@@ -22,6 +22,12 @@ export interface ArenaStatus {
   /** Countdown data for the HUD clock pill. */
   phaseStartedAt: number | null
   phaseDurationMs: number | null
+
+  /**
+   * Events at or below this seq belong to a previous round. The arena owns this
+   * so a reloaded office hides the same backlog a long-lived one does.
+   */
+  epochSeq: number
 }
 
 export const ARENA_URL = import.meta.env.VITE_ARENA_URL ?? 'http://localhost:4000'
@@ -91,6 +97,19 @@ export async function startRound(config: RoundConfig): Promise<StartAck> {
 
   // 409 carries a real reason ("a round is already running"), so parse either way.
   return (await res.json()) as StartAck
+}
+
+/**
+ * Ends the round and returns the arena to the lobby.
+ *
+ * `stopping` means a live round is being torn down and the arena reaches idle
+ * shortly after — the office finds out from its own /state poll, not from here,
+ * because teardown outlasts the request.
+ */
+export async function resetRound(): Promise<{ ok: boolean; stopping: boolean }> {
+  const res = await fetch(`${ARENA_URL}/reset`, { method: 'POST' })
+  if (!res.ok) throw new Error(`reset failed: ${res.status}`)
+  return (await res.json()) as { ok: boolean; stopping: boolean }
 }
 
 export async function fetchStatus(): Promise<ArenaStatus> {

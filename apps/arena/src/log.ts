@@ -63,6 +63,16 @@ export class EventLog {
     return this.#events.filter((e) => e.seq > seq)
   }
 
+  /**
+   * The highest seq emitted so far. The log is never truncated — one process
+   * appends every round to it — so a round records this at its start and the
+   * office hides everything at or below it. That is how "start a new round"
+   * clears the office without asking the log to forget anything.
+   */
+  head(): number {
+    return this.#seq
+  }
+
   subscribe(fn: (e: AgentEvent) => void): () => void {
     this.#subs.add(fn)
     return () => this.#subs.delete(fn)

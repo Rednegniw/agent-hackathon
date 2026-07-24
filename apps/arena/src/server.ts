@@ -14,6 +14,13 @@ export interface ServerDeps {
    * event stream, not awaited over HTTP.
    */
   start?: (opts: { arena?: unknown; speed?: unknown }) => StartAck
+
+  /**
+   * Ends the current round, if any, and returns the arena to idle — which is
+   * what hands the office back its lobby. Like start it acks rather than
+   * waits: teardown can take a while, and the office watches /state for it.
+   */
+  reset?: () => { ok: true; stopping: boolean }
 }
 
 export type StartAck =
@@ -60,6 +67,24 @@ export function startServer(deps: ServerDeps, port = Number(process.env.PORT ?? 
      * bad payload (400) — the office retries one and not the other.
      */
     res.status(ack.ok ? 202 : (ack.status ?? 409)).json(ack)
+  })
+
+  /**
+   * Stop the round and go back to the lobby. One route for both, because they
+   * are one operation: the office's button ends whatever is happening — a live
+   * round or a finished one still showing its leaderboard — and the answer in
+   * both cases is an idle arena.
+   *
+   * 202, like /start: `stopping: true` means teardown is still running and the
+   * arena reaches idle a moment later, which the office sees when it polls.
+   */
+  app.post('/reset', (_req, res) => {
+    if (!deps.reset) {
+      res.status(501).json({ ok: false, reason: 'this server was started without a round runner' })
+      return
+    }
+
+    res.status(202).json(deps.reset())
   })
 
   app.get('/events', (req, res) => {
