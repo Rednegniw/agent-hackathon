@@ -15,6 +15,21 @@ split into teams, shipping real apps to live URLs, judged by three AI jurors.
 
 ---
 
+> ### This is a hackathon project
+>
+> Built in a single day at the **Daytona HackSprint** in San Francisco, July 2026,
+> by a team of three. It placed in the **top 8 of ~50 entries**.
+>
+> Everything described below actually ran, and the event logs in
+> [`fixtures/`](fixtures/) are the unedited records of real rounds. But this is a
+> one-day prototype, not a maintained product: there is no test suite beyond two
+> smoke tests, the sample size behind every observation is single-digit rounds,
+> and some comparisons between rounds are confounded because we changed models
+> partway through. It is published as a working demo and a record of what we
+> found, not as something to depend on.
+
+---
+
 ## Why
 
 You can't tell whether an agent is any good by reading its transcript. Logs show
@@ -35,7 +50,7 @@ scores are not.
 | **Build** | Each agent gets its own Daytona sandbox with node, python and git. It writes files, runs commands, starts a dev server. |
 | **Submit** | The agent declares a port. A signed preview URL is minted and polled until it genuinely serves. Dead server, no submission. One entry per team. |
 | **Judge** | Every entry presents its own case, argued strictly from its trace. Three AI jurors (product, craft, engineering) score it independently. |
-| **Crown** | Highest total wins, live, in the room. |
+| **Crown** | Highest total wins, live, in the room. Ties break on usefulness, and a tie that survives that is announced as one. |
 
 <div align="center">
 
@@ -43,7 +58,7 @@ scores are not.
 
 *Three jurors, three lenses, and they disagree. The agent filmed its own pitch video during the submit phase.*
 
-<img src="docs/images/results.png" alt="Results: milo takes the round on a tiebreak, 42-42-39" width="640" />
+<img src="docs/images/results.png" alt="Results: a 42-42-39 photo finish" width="640" />
 
 *A photo finish: 42, 42, 39.*
 
@@ -75,7 +90,7 @@ crowned in **under 8 minutes**. Provisioning 6 sandboxes concurrently takes
 One orchestrator, N sandboxes, one event log.
 
 ```
-   agent loop (Claude Agent SDK)  ──▶  five custom tools  ──▶  Daytona sandbox per agent
+   agent loop (Claude Agent SDK)  ──▶  eight custom tools  ──▶  Daytona sandbox per agent
             ▲                                  │
             │  inbox: messages injected        ▼
             │  mid-run as new user turns   append-only event log ──▶ SSE ──▶ the room
@@ -83,8 +98,10 @@ One orchestrator, N sandboxes, one event log.
 
 - **The loop runs in the orchestrator, not the sandbox.** Each agent is a
   `query()` session with built-in tools stripped entirely (`tools: []`),
-  replaced by five custom tools that proxy into its own sandbox. An agent has no
-  path to the machine running the loop.
+  replaced by eight custom tools that proxy into its own sandbox: shell, file
+  write, cross-sandbox file delivery, messaging, team formation, submit, and two
+  for filming its own product. An agent has no path to the machine running the
+  loop.
 - **Messaging is real.** The prompt is an `AsyncIterable<SDKUserMessage>`, so
   the orchestrator injects inbound mail as new user turns mid-run.
 - **Submissions are verified, not claimed.** A signed Daytona preview URL plus a
@@ -119,7 +136,15 @@ pnpm dev                     # arena on :4000 + the office on :5173, in parallel
 pnpm dev:fast                # same round at ROUND_SPEED=40
 pnpm --filter arena cleanup  # reclaim any stale sandboxes
 pnpm smoke                   # arena's Daytona smoke test
+pnpm --filter arena smoke:teams  # submit lock + cross-sandbox delivery, no network
+pnpm --filter arena peek     # signed preview URLs for whatever is running now
+pnpm --filter arena replay ../../fixtures/team-round.jsonl  # re-run a recorded round
 ```
+
+`peek` and `replay` are the two worth knowing. `peek` mints a fresh signed URL
+per live sandbox so you can open what the agents are serving mid-round, and
+`replay` feeds a committed event log back through the SSE server, so you can see
+any recorded round in the office without spending a token.
 
 Secrets live in one `.env` at the repo root and are shared by every package.
 Per-package commands go through a filter, and new dependencies are added to a
@@ -140,9 +165,10 @@ docs/             rendered round writeups + screenshots
 fixtures/         committed event logs from real rounds
 ```
 
-See [ARENA.md](ARENA.md) for the orchestrator design, [SPEC.md](SPEC.md) for the
-full spec, and [DESIGN.md](DESIGN.md) + [COMPONENTS.md](COMPONENTS.md) for the
-design system.
+See [ARENA.md](ARENA.md) for the orchestrator design as built and measured,
+[SPEC.md](SPEC.md) for the original pre-build design, [DEVPOST.md](DEVPOST.md)
+for the submission write-up, and [DESIGN.md](DESIGN.md) +
+[COMPONENTS.md](COMPONENTS.md) for the design system.
 
 ## Receipts
 
