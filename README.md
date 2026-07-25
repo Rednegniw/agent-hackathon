@@ -165,10 +165,10 @@ docs/             rendered round writeups + screenshots
 fixtures/         committed event logs from real rounds
 ```
 
-See [ARENA.md](ARENA.md) for the orchestrator design as built and measured,
-[SPEC.md](SPEC.md) for the original pre-build design, [DEVPOST.md](DEVPOST.md)
-for the submission write-up, and [DESIGN.md](DESIGN.md) +
-[COMPONENTS.md](COMPONENTS.md) for the design system.
+See [ARENA.md](ARENA.md) for the orchestrator design and the measured Daytona
+behaviour behind it, [DESIGN.md](DESIGN.md) + [COMPONENTS.md](COMPONENTS.md) for
+the design system, and [fixtures/README.md](fixtures/README.md) for the recorded
+rounds.
 
 ## Receipts
 

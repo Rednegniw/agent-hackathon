@@ -1,24 +1,20 @@
-# Arena spec
+# The arena
 
-The substrate the agents act on. This is one of three lanes; see
-[SPEC.md](SPEC.md) for the original design of the whole system.
+How the substrate under the agents works: Daytona sandbox lifecycle, preview URL
+resolution and health checks, the event log, the phase clock, the SSE endpoint,
+and the local `FakeArena` that stands in for all of it.
 
-**Owns:** Daytona sandbox lifecycle, preview URL resolution and health checks,
-the event log, the phase clock, the SSE endpoint, and `FakeArena`.
-
-**Does not own:** the Claude Agent SDK loop, personas, prompts, inbox delivery,
-the judge (Patrik). The office and the presentation (Kris).
-
-**Contract with Patrik:** the `Arena` interface below, shipped as `FakeArena`
-inside the first ten minutes so he never waits on Daytona.
+The agent loop itself, the personas and the judge live in
+[`apps/arena/src`](apps/arena/src); the office is
+[`apps/frontend`](apps/frontend).
 
 ---
 
 ## Verified facts
 
 Everything here was measured against `@daytona/sdk@0.200.1` and a live sandbox
-on 2026-07-24, not read off a docs page. Where this contradicts SPEC.md, this
-document is right.
+on 2026-07-24, not read off a docs page. Several of these contradict the SDK's
+own documentation and examples, which is why they are written down.
 
 | Fact | Value |
 |------|-------|
@@ -37,15 +33,15 @@ document is right.
 | mp4 render, 3 slides + audio | **~0.5s** |
 | `fs.downloadFile(path)` | Works, ~0.5s for a 350KB mp4. Same relative-path rules as `uploadFile`. |
 
-### Three corrections to SPEC.md
+### Two things worth knowing before you start
 
 1. **No custom snapshot is needed.** The default image already carries node,
-   npm, python and git. The `daytona snapshot create hack-agent` step in SPEC.md
-   is dead work for the MVP. Build a snapshot only if we later want npm
-   dependencies pre-cached, which is an optimisation, not a blocker.
+   npm, python and git, so a `daytona snapshot create` step is dead work. Build
+   a snapshot only if you want npm dependencies pre-cached, which is an
+   optimisation, not a prerequisite.
 2. **Use `getSignedPreviewUrl()`, not `getPreviewLink()`.** They are different
-   methods. The plain one 401s without a header, which an `<iframe>` cannot send.
-3. The preview hostname in SPEC.md is wrong. It is `daytonaproxy01.net`.
+   methods, not a flag on one. The plain one 401s without a token header, which
+   an `<iframe>` cannot send.
 
 ---
 
@@ -78,8 +74,8 @@ export interface Arena {
 }
 ```
 
-`AgentId` is the twelve-persona union in `src/events.ts`, which both lanes
-import. `agentId` is `AgentId | 'system'`, because `phase` and `score` events
+`AgentId` is the twelve-persona union in `src/events.ts`, imported by both the
+arena and the office. `agentId` is `AgentId | 'system'`, because `phase` and `score` events
 have no agent.
 
 **Tracks were cut.** An earlier draft had agents claim one of two themed tracks
@@ -92,10 +88,10 @@ teams instead, so none of that exists in the code.
 
 Create lazily at the end of mingle, one per agent on the roster.
 
-### The lifecycle trap, and it will cost us the demo if ignored
+### The lifecycle trap
 
-Three independent timers all destroy the thing we pitch, and the defaults are
-worse than they look. From `Daytona.d.ts:122,125,131`:
+Three independent timers will delete the sandbox behind a preview URL, and the
+defaults are worse than they look. From `Daytona.d.ts:122,125,131`:
 
 - **`autoStopInterval` is in MINUTES, not seconds**, and **defaults to 15**.
 - **`ephemeral: true` forces `autoDeleteInterval = 0`**, which means "delete
@@ -103,13 +99,12 @@ worse than they look. From `Daytona.d.ts:122,125,131`:
 - **Signed URLs default to 60 seconds** (`Sandbox.d.ts:559`). Passing an explicit
   expiry is load-bearing.
 
-This mattered because the demo plan was to run a round two hours before pitching
-it, with the winning preview URLs live on stage. With the defaults those
-sandboxes are deleted about twenty minutes after the round and the iframe shows
-a 404 in front of the room. You cannot re-sign a URL for a deleted sandbox, so
-"just call `preview()` again" is not a recovery path.
+So if you run a round and come back to its URLs an hour later, they are gone:
+with the defaults the sandboxes are deleted roughly twenty minutes after the
+round ends and the iframe shows a 404. You cannot re-sign a URL for a deleted
+sandbox, so "just call `preview()` again" is not a recovery path.
 
-**The rule: the run we pitch from is a keep-alive run.**
+**The rule: any round whose URLs you intend to revisit is a keep-alive run.**
 
 ```ts
 const KEEP = process.env.KEEP_ALIVE === '1'
@@ -137,11 +132,12 @@ try {
 other five. Log failures and move on. Sandboxes kept alive are findable and
 deletable afterwards by the `round` label, so this leaks nothing permanently.
 
-**Backstage before the pitch:** re-mint the signed URLs for the winners. It is
-one `preview()` call each and it removes every expiry question.
+**Before showing a round:** re-mint the signed URLs. It is one `preview()` call
+per sandbox and it removes every expiry question. `pnpm --filter arena peek`
+does this for every live sandbox at once.
 
-`labels` make sandboxes findable in the dashboard while demoing, which is worth
-doing because a judge may ask to see them.
+`labels` make sandboxes findable in the Daytona dashboard, and `cleanup` uses
+the `round` label to reclaim a specific round.
 
 **Do not** pass a `snapshot` name until a snapshot actually exists. A bad
 snapshot name fails at create time, which is the worst place to discover it.
@@ -300,7 +296,7 @@ app.get('/events', (req, res) => {
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
-    'Access-Control-Allow-Origin': '*',   // Kris's office runs on another origin
+    'Access-Control-Allow-Origin': '*',   // the office runs on another origin
   })
 
   // EventSource auto-reconnects after any blip and sends Last-Event-ID.
@@ -316,12 +312,11 @@ app.get('/events', (req, res) => {
 })
 ```
 
-**Replay-then-tail on connect.** This is what lets Kris refresh mid-demo without
+**Replay-then-tail on connect.** This is what lets the office refresh mid-round without
 losing the room. Without it a reload shows an empty office.
 
 `id:` on every frame plus the `Last-Event-ID` check makes reconnects idempotent.
-The office should still dedupe by `seq` as a belt-and-braces measure; say so to
-Kris, since it is a two-line guard on his side.
+The office still dedupes by `seq` as a belt-and-braces measure.
 
 The heartbeat comment keeps proxies from closing an idle stream. Always clean up
 both the subscription and the interval on `close` or a long session leaks.
@@ -435,7 +430,7 @@ sandboxes**. Use `ARENA=fake` for the office and the event plumbing, and
 
 ## FakeArena
 
-Ship this first. It is what unblocks Patrik.
+The local stand-in: no Daytona, no network, no cost.
 
 - `bash` runs via `child_process.exec` in a per-agent temp dir
 - `write` writes to that temp dir
@@ -443,7 +438,7 @@ Ship this first. It is what unblocks Patrik.
   `http://localhost:<port>`, health-checked with the same polling loop
 
 The health-check and phase logic are then shared between fake and real, which
-means the code path Patrik develops against is the code path that ships. Expose
+means the code path you develop against locally is the code path that ships. Expose
 it with `ARENA=fake pnpm dev`.
 
 ---
@@ -454,24 +449,27 @@ Never debug the full run. Each rung isolates one failure domain.
 
 | Rung | Command | Costs | Proves |
 |------|---------|-------|--------|
-| 1 | `pnpm smoke` | a few cents | The whole Daytona path: create, write, serve, sign, fetch, delete. **Already written and passing.** |
-| 1½ | `pnpm --filter arena smoke:studio` | cents, plus a little TTS | The studio: screenshot, narrate, render, download, serve. ~30s. |
+| 1 | `pnpm smoke` | a few cents | The whole Daytona path: create, write, serve, sign, fetch, delete |
+| 1½ | `pnpm --filter arena smoke:studio` | cents, plus a little TTS | The studio: screenshot, narrate, render, download, serve. ~30s |
+| 1¾ | `pnpm --filter arena smoke:teams` | nothing | The submit lock and cross-sandbox file delivery |
 | 2 | `ARENA=fake pnpm dev` | nothing | Arena plus agent loop plus office, no Daytona, no tokens |
-| 3 | one real agent, `ROUND_SPEED=4` | some tokens | A model can actually drive the tools |
-| 4 | full six-agent run | real tokens | The demo. Run once, keep `events.jsonl`. |
-| any | `pnpm replay events.jsonl` | nothing | The office, at 10x, no agents |
+| 3 | `ARENA=daytona AGENTS=ada,rex real` | some tokens | A model can actually drive the tools |
+| 4 | a full roster | real tokens | An end-to-end judged round |
+| any | `pnpm --filter arena replay ../../fixtures/team-round.jsonl` | nothing | The office, no agents |
 
-`smoke.mjs` is committed and green. Re-run it any time Daytona misbehaves; it
-tells you in thirty seconds whether the problem is us or them.
+`smoke.mjs` re-run tells you in thirty seconds whether a failure is yours or
+Daytona's.
+
+**Do not use `ROUND_SPEED` for a round with real agents.** It divides every
+phase, including `submit`, so a speed of 4 leaves a 30-second submit window. In
+one observed round all three agents finished their pages, kept polishing, and
+the phase closed before any of them called `submit`: the round scored 0/6 with
+three working apps sitting in sandboxes. Shorten a real round with explicit
+`durations` instead, and keep the submit window generous.
 
 There is no unit-test runner. `smoke.mjs` covers the Daytona substrate and
 `pnpm --filter arena smoke:teams` covers the submit lock and cross-sandbox file
 delivery, which are the two pieces with logic worth asserting.
-
-**Toolchain does not exist yet.** `package.json` has only `@daytona/sdk` and
-`dotenv`. Before any of this is runnable: a TS runner (`tsx`), a server for the
-SSE route, and the agent SDK plus `zod` for Patrik's lane. Do that install once,
-first, rather than discovering it three times.
 
 ---
 
@@ -482,21 +480,34 @@ pnpm workspace. Every package lives under `apps/`, the root holds only workspace
 ```
 apps/arena/
   src/
-    events.ts        AgentEvent, AgentId, Track, Phase   <- shared, both lanes import
-    arena.ts         Arena interface
-    arena-base.ts    shared health-check and phase logic
-    arena-daytona.ts DaytonaArena
-    arena-fake.ts    FakeArena
-    log.ts           EventLog
-    phases.ts        clock + ROUND
+    events.ts        AgentEvent, AgentId, Phase        <- shared with the office
+    arena.ts         the Arena and AgentSandbox interfaces
+    arena-base.ts    health-check and phase logic shared by both arenas
+    arena-daytona.ts real sandboxes
+    arena-fake.ts    local temp-dir stand-in, no network
+    agent.ts         the Claude Agent SDK loop, personas, and the eight tools
+    inbox.ts         agent-to-agent delivery, injected mid-run as user turns
+    teams.ts         team formation, auto-settling, the one-submission lock
+    judge.ts         presentations, the three jurors, scoring, the crown
+    trace.ts         a view over the log: what a juror actually reads
+    topic.ts         the brief
+    round.ts         one round, startable from the office
+    phases.ts        the phase clock
+    log.ts           the append-only event log
     studio.ts        screenshots, slides, ffmpeg -> the pitch video
-    voice.ts         ElevenLabs, one voice per agent
+    voice.ts         ElevenLabs narration, one voice per agent
     media.ts         where rendered media lands and how it is addressed
-    server.ts        SSE + static + /media
-    dev.ts           full fake round, rung 2
-    smoke-studio.ts  rung 1½, the studio on its own
+    braintrust.ts    logs each round as an experiment
+    server.ts        SSE + static + /media + POST /start
+    dev.ts           the arena server; the office starts rounds against it
+    real.ts          a round from the command line
+    replay.ts        re-serve a recorded round from a fixture
+    peek.ts          signed preview URLs for whatever is running now
+    cleanup.ts       reclaim sandboxes by round label
+    smoke-studio.ts  the studio on its own, against one real sandbox
+    smoke-teams.ts   submit lock + cross-sandbox delivery, no network
     env.ts           loads the repo-root .env
-  smoke.mjs          rung 1, committed and passing
+  smoke.mjs          the Daytona substrate smoke test
   runs/              one events jsonl per run, gitignored
   public/media/      one directory of pitch videos per round, gitignored
 apps/frontend/       the office, Vite + React

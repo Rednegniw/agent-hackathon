@@ -1,6 +1,8 @@
 # frontend
 
-The office frontend. Vite + React + TypeScript. Currently a "hello world" shell.
+The office: the pixel-art room that renders a round live. Vite + React +
+TypeScript, subscribed to the arena's SSE stream and holding no state of its own
+that the event log does not already have.
 
 Run from anywhere in the workspace:
 
@@ -11,4 +13,8 @@ pnpm --filter frontend preview  # serve the production build
 pnpm --filter frontend lint     # oxlint
 ```
 
-`pnpm dev` at the repo root is a shortcut for the first one.
+`pnpm dev` at the repo root starts this *and* the arena together, which is what
+you usually want: the office needs the arena on :4000 to have anything to show.
+
+See [DESIGN.md](../../DESIGN.md) and [COMPONENTS.md](../../COMPONENTS.md) for the
+design system this is built on.

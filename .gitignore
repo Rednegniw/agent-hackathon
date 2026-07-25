@@ -6,6 +6,11 @@
 # macOS
 .DS_Store
 
+# Editor / agent tooling, local to whoever is working
+.claude/
+.vscode/
+.idea/
+
 # Dependencies
 node_modules/
 .pnpm-store/

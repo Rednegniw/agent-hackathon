@@ -31,11 +31,12 @@ throwaway rounds do not pile up in git.
 
 Two uses:
 
-- **The office.** Kris can develop against it with no arena, no Daytona and no
-  tokens. Every submission carries a real `previewUrl`, and the event shapes are
-  exactly what the SSE stream emits.
-- **The stage fallback.** Replaying beats improvising a live re-run in front of
-  judges.
+- **Developing the office.** No arena, no Daytona, no tokens. Every submission
+  carries a real `previewUrl`, and the event shapes are exactly what the SSE
+  stream emits.
+- **Showing a round without running one.** `pnpm --filter arena replay
+  ../../fixtures/<file>.jsonl` re-serves any of these through the SSE endpoint,
+  so the office plays it back exactly as it happened.
 
 The sandboxes behind this run's preview URLs have been reclaimed, so those URLs
 now 404. The event log itself is unaffected: it is a record of what happened, and
