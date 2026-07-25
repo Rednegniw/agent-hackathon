@@ -42,11 +42,6 @@ export class TeamRoster {
     return id ? this.#teams.get(id) : undefined
   }
 
-  /** The member who speaks for the team. */
-  isOwner(agentId: AgentId): boolean {
-    return this.teamOf(agentId)?.owner === agentId
-  }
-
   /**
    * A team ships ONE project. The first member whose submission is accepted
    * becomes the team's submitter; everyone else is refused and told who holds

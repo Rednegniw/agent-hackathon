@@ -35,7 +35,6 @@ startServer({
     arena: 'fake',
     roundId: runId,
     phase,
-    tracks: {},
     startedAt: Date.now(),
     finishedAt: null,
     error: null,

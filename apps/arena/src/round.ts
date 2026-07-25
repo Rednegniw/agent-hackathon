@@ -16,9 +16,9 @@ import { TOPIC, setTopic } from './topic.js'
  *
  * Two flavours, because they answer different questions:
  *
- * - `scripted` agents exercise the whole substrate (claim a track, write a
- *   file, serve it, resolve a signed preview URL, submit) without spending a
- *   token. Their output is fixed, so the brief only decorates the page.
+ * - `scripted` agents exercise the whole substrate (write a file, serve it,
+ *   resolve a signed preview URL, submit) without spending a token. Their
+ *   output is fixed, so the brief only decorates the page.
  * - `real` agents are the Claude Agent SDK loop in agent.ts. These are the
  *   ones the brief actually drives, and they cost tokens on every round.
  */
@@ -98,10 +98,11 @@ export const SCRIPTED_DURATIONS: Durations = { mingle: 4, build: 30, submit: 8 }
 export const REAL_DURATIONS: Durations = { mingle: 20, build: 240, submit: 90 }
 
 /**
- * Four, not six. Six personas exist and the office can still ask for them, but
- * a default round stays inside the account's vCPU budget with room for the
- * orphans a keep-alive round leaves behind — and four decks filmed at the end
- * of one submit phase also sits comfortably inside the TTS concurrency cap.
+ * Four, not twelve. All twelve personas exist and the office can ask for them,
+ * but a default round stays inside the account's vCPU budget (a hard cap of 10
+ * total, so a 12-agent round leaves three agents without a sandbox) with room
+ * for the orphans a keep-alive round leaves behind. Four decks filmed at the
+ * end of one submit phase also sits inside the TTS concurrency cap.
  */
 export const DEFAULT_AGENTS = 4
 
@@ -174,8 +175,8 @@ export function parseStartOptions(body: StartBody): StartOptions | { error: stri
   const kind = agents as AgentKind
 
   /**
-   * Roster size is capped by how many personas exist and by track capacity,
-   * and floored at one so a round always has someone in it.
+   * Roster size is capped by how many personas exist, and floored at one so a
+   * round always has someone in it.
    */
   const agentCount = Number(body.agentCount ?? DEFAULT_START.agentCount)
   if (!Number.isInteger(agentCount) || agentCount < 1 || agentCount > AGENT_IDS.length) {
@@ -587,7 +588,7 @@ export class RoundRunner {
     )
   }
 
-  /** One agent: pick a track, build Hello world, serve it, submit the URL. */
+  /** One agent: build Hello world, serve it, submit the URL. */
   async #agentScript(arena: BaseArena, clock: PhaseClock, id: AgentId, kind: ArenaKind, roundId: string) {
     await sleep(300 + Math.floor(Math.random() * 900))
 

@@ -1,7 +1,15 @@
 # Spec
 
 Implementation spec for the agent loop, the hackathon rules, and the Daytona
-scaffolding. Read [PLAN.md](PLAN.md) first for scope and schedule.
+scaffolding.
+
+> **This is the original design document, written before the build.** It is kept
+> as a record of the reasoning, not as a description of the shipped system. The
+> code is the source of truth, and it diverges in three places: themed *tracks*
+> were cut in favour of one brief plus teams, the *mechanical* half of the score
+> was dropped so the jurors carry it alone, and a `judging` phase was added
+> between `submit` and `judged`. For the substrate as actually built and
+> measured, see [ARENA.md](ARENA.md).
 
 ## The architecture decision
 

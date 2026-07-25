@@ -290,7 +290,23 @@ export async function runEvaluation(
     verdicts.push({ agentId: entries[i].label as AgentId, total, perJudge, presentation: speeches[i], members: entries[i].members, voice: entries[i].voice })
   }
 
-  verdicts.sort((a, b) => b.total - a.total)
+  /**
+   * Total first, then an explicit tiebreak on usefulness, the criterion the
+   * brief actually asks for. Without one a tie resolved by submission order,
+   * which is not a judgement: observed live, where two teams both scored 42/90
+   * and the crown went to whoever happened to submit first. A tie that survives
+   * both keys is genuinely undecided, and `tied` says so rather than hiding it.
+   */
+  const usefulness = (v: Verdict) =>
+    v.perJudge.reduce((sum, s) => sum + (s.scores.useful ?? 0), 0)
+
+  verdicts.sort((a, b) => b.total - a.total || usefulness(b) - usefulness(a))
+
+  const tied =
+    verdicts.length > 1 &&
+    verdicts[0].total === verdicts[1].total &&
+    usefulness(verdicts[0]) === usefulness(verdicts[1])
+
   verdicts.forEach((v, i) => {
     arena.emit({
       agentId: v.voice,
@@ -301,13 +317,14 @@ export async function runEvaluation(
   })
 
   const winner = verdicts[0]
+  const who = winner.members.length > 1 ? `${winner.agentId} (${winner.members.join(' + ')})` : winner.agentId
+
   arena.emit({
     agentId: winner.voice,
     kind: 'crown',
-    body:
-      winner.members.length > 1
-        ? `${winner.agentId} (${winner.members.join(' + ')}) wins with ${winner.total} points`
-        : `${winner.agentId} wins with ${winner.total} points`,
+    body: tied
+      ? `${who} wins with ${winner.total} points, tied on every criterion and taken on submission order`
+      : `${who} wins with ${winner.total} points`,
   })
 
   return { verdicts, winner }

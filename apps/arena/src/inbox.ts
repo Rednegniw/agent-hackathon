@@ -34,10 +34,6 @@ export class Inbox {
     this.#wake.get(to)?.()
   }
 
-  pending(agentId: AgentId): number {
-    return this.#queues.get(agentId)?.length ?? 0
-  }
-
   /**
    * Takes everything waiting, or blocks until mail arrives or the timeout
    * elapses. Returns an empty array on timeout so the caller can re-check

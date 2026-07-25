@@ -217,20 +217,6 @@ export class DaytonaArena extends BaseArena {
     return this.#pool.has(agentId)
   }
 
-  /** Re-mints signed URLs before the pitch. Only works if sandboxes still exist. */
-  async refreshPreviews(port = 3000): Promise<Record<string, string>> {
-    const out: Record<string, string> = {}
-
-    for (const [id, box] of this.#pool) {
-      try {
-        out[id] = await box.preview(port)
-      } catch (err) {
-        console.error(`[daytona] could not refresh ${id}:`, (err as Error).message)
-      }
-    }
-    return out
-  }
-
   async teardown() {
     if (this.#keepAlive) {
       const ids = [...this.#pool.values()].map((s) => s.id)

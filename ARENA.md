@@ -1,10 +1,10 @@
 # Arena spec
 
 The substrate the agents act on. This is one of three lanes; see
-[SPEC.md](SPEC.md) for the whole system and [PLAN.md](PLAN.md) for scope.
+[SPEC.md](SPEC.md) for the original design of the whole system.
 
 **Owns:** Daytona sandbox lifecycle, preview URL resolution and health checks,
-the event log, the phase clock, track claiming, the SSE endpoint, and `FakeArena`.
+the event log, the phase clock, the SSE endpoint, and `FakeArena`.
 
 **Does not own:** the Claude Agent SDK loop, personas, prompts, inbox delivery,
 the judge (Patrik). The office and the presentation (Kris).
@@ -51,44 +51,46 @@ document is right.
 
 ## The interface
 
-This is the whole seam. Ship it first, with `FakeArena` behind it.
+This is the whole seam, as shipped. `FakeArena` implements it too, so the code
+path developed against a laptop is the code path that runs on Daytona.
 
 ```ts
-export type AgentId = 'ada' | 'rex' | 'juno' | 'iris' | 'otto' | 'vera'
-export type Track = 'time' | 'color'
-export type Phase = 'idle' | 'mingle' | 'build' | 'submit' | 'judged'
+export type Phase = 'idle' | 'mingle' | 'build' | 'submit' | 'judging' | 'judged'
 
 export interface AgentSandbox {
   /** Runs in the sandbox. Rejects on non-zero exit with stdout attached. */
   bash(command: string): Promise<string>
   /** Absolute or ~-relative path. Creates parent dirs. */
   write(path: string, content: string): Promise<void>
+  writeBytes(path: string, content: Uint8Array): Promise<void>
+  /** How rendered media leaves the sandbox before teardown. */
+  read(path: string): Promise<Uint8Array>
   /** Signed, health-checked, iframe-safe URL. Rejects if nothing is serving. */
   preview(port: number): Promise<string>
 }
 
 export interface Arena {
   sandboxFor(agentId: AgentId): AgentSandbox
-  claimTrack(agentId: AgentId, track: Track): { ok: true } | { ok: false; open: Track[] }
-  trackOf(agentId: AgentId): Track | undefined
-  emit(e: Omit<AgentEvent, 'seq' | 'ts'>): AgentEvent
+  /** Optional: only a real arena can fail to provision one. */
+  has?(agentId: AgentId): boolean
+  emit(e: NewEvent): AgentEvent
   phase(): Phase
 }
 ```
 
-`AgentEvent` is defined in SPEC.md and is the shared type. Put it in
-`src/events.ts` and let both lanes import from there.
+`AgentId` is the twelve-persona union in `src/events.ts`, which both lanes
+import. `agentId` is `AgentId | 'system'`, because `phase` and `score` events
+have no agent.
 
-**One fix to it before anyone imports it:** SPEC.md makes `agentId` required, but
-`phase` and `score` events have no agent. Widen it to
-`agentId: AgentId | 'system'`. Do this first; changing a type both lanes have
-already imported is exactly the kind of 13:30 merge conflict we cannot afford.
+**Tracks were cut.** An earlier draft had agents claim one of two themed tracks
+(`claimTrack`, `trackOf`). The shipped design has a single brief per round and
+teams instead, so none of that exists in the code.
 
 ---
 
 ## Sandbox lifecycle
 
-Create lazily at the end of mingle, one per agent that claimed a track.
+Create lazily at the end of mingle, one per agent on the roster.
 
 ### The lifecycle trap, and it will cost us the demo if ignored
 
@@ -101,11 +103,11 @@ worse than they look. From `Daytona.d.ts:122,125,131`:
 - **Signed URLs default to 60 seconds** (`Sandbox.d.ts:559`). Passing an explicit
   expiry is load-bearing.
 
-The schedule in PLAN.md is a full run around 14:00 and a stage pitch at 16:00,
-and slide 4 promises the winning preview URLs live. With the defaults, those
-sandboxes are deleted by roughly 14:20 and the iframe shows a 404 in front of the
-room. You cannot re-sign a URL for a deleted sandbox, so "just call `preview()`
-again" is not a recovery path.
+This mattered because the demo plan was to run a round two hours before pitching
+it, with the winning preview URLs live on stage. With the defaults those
+sandboxes are deleted about twenty minutes after the round and the iframe shows
+a 404 in front of the room. You cannot re-sign a URL for a deleted sandbox, so
+"just call `preview()` again" is not a recovery path.
 
 **The rule: the run we pitch from is a keep-alive run.**
 
@@ -289,36 +291,6 @@ real minutes to test the phase machine.
 
 ---
 
-## Track claiming
-
-Pure logic, no I/O, so unit-test it directly.
-
-```ts
-claimTrack(agentId, track) {
-  const existing = this.#tracks.get(agentId)
-  // Idempotent only for the SAME track. Returning ok for a different track
-  // would let the tool emit a `theme` event that disagrees with trackOf(),
-  // so the office and the per-track judge would rank the entry under the
-  // wrong brief. A model will absolutely call this twice.
-  if (existing) return existing === track ? { ok: true } : { ok: false, open: this.#open() }
-  const taken = [...this.#tracks.values()].filter((t) => t === track).length
-  if (taken >= 3) {
-    const open = (['time', 'color'] as Track[]).filter(
-      (t) => [...this.#tracks.values()].filter((x) => x === t).length < 3,
-    )
-    return { ok: false, open }
-  }
-  this.#tracks.set(agentId, track)
-  return { ok: true }
-}
-```
-
-Idempotent on re-claim, because a model will call it twice. At the end of mingle,
-assign anyone still unclaimed to the emptier track and emit the `theme` event on
-their behalf. A missing pick must never stall the round.
-
----
-
 ## SSE
 
 ```ts
@@ -492,9 +464,9 @@ Never debug the full run. Each rung isolates one failure domain.
 `smoke.mjs` is committed and green. Re-run it any time Daytona misbehaves; it
 tells you in thirty seconds whether the problem is us or them.
 
-Unit tests for the phase clock and track claiming were in an earlier draft and
-are **cut**. The logic is thirty lines and rungs 1 and 2 exercise both. With the
-time left, a test runner is setup cost we do not get back.
+There is no unit-test runner. `smoke.mjs` covers the Daytona substrate and
+`pnpm --filter arena smoke:teams` covers the submit lock and cross-sandbox file
+delivery, which are the two pieces with logic worth asserting.
 
 **Toolchain does not exist yet.** `package.json` has only `@daytona/sdk` and
 `dotenv`. Before any of this is runnable: a TS runner (`tsx`), a server for the

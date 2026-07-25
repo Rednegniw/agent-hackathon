@@ -73,7 +73,7 @@ type Hook = (phase: Phase) => void | Promise<void>
 /**
  * Wall-clock phase driver. Runs the sequence once, then lands on 'judged'.
  * Hooks are awaited between phases, which is where sandbox creation and
- * end-of-mingle track assignment hang off.
+ * end-of-mingle team settling hang off.
  */
 export class PhaseClock {
   #phase: Phase = 'idle'

@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import type { AgentEvent } from './events.js'
 import type { EventLog } from './log.js'
 import { MEDIA_DIR } from './media.js'
+import type { StartBody } from './round.js'
 
 export interface ServerDeps {
   log: EventLog
@@ -13,7 +14,7 @@ export interface ServerDeps {
    * one. Returns an ack, never the round's result: the round is watched on the
    * event stream, not awaited over HTTP.
    */
-  start?: (opts: { arena?: unknown; speed?: unknown }) => StartAck
+  start?: (body: StartBody) => StartAck
 }
 
 export type StartAck =
